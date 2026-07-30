@@ -17,6 +17,8 @@ const HTTPS_PORT = Number(process.env.PR_HTTPS_PORT || 443);
 const RENEW_BEFORE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
 const PORT_CACHE_MS = 5000;
 const RECONCILE_MS = 60_000;
+const RETRY_BASE_MS = 5 * 60_000; // após falhar, espera 5min, depois 10, 20…
+const RETRY_MAX_MS = 60 * 60_000;
 
 export const statePath = () => path.join(store.HOME, 'proxy.json');
 
@@ -28,6 +30,8 @@ export function createProxy({ log = console.log } = {}) {
   /** certificados carregados: domínio → SecureContext */
   const contexts = new Map();
   const issuing = new Set();
+  /** domínio → quando pode tentar emitir de novo (backoff após falha) */
+  const retryAfter = new Map();
   let serverIp = null;
 
   // ── roteamento ─────────────────────────────────────────────────────────
@@ -186,6 +190,11 @@ export function createProxy({ log = console.log } = {}) {
     const info = domains.certInfo(domain);
     if (info.ok && info.expiresAt - Date.now() > RENEW_BEFORE_MS) return;
 
+    // depois de falhar, espera antes de tentar de novo: o Let's Encrypt
+    // limita as validações com erro e insistir só queima a cota
+    const wait = retryAfter.get(domain);
+    if (wait && Date.now() < wait.until) return;
+
     const { pointing, records, extras } = await pointsHere(domain, serverIp);
     if (pointing && extras.length) {
       // o desafio pode cair no outro IP e falhar sem motivo aparente
@@ -222,10 +231,17 @@ export function createProxy({ log = console.log } = {}) {
       fs.writeFileSync(paths.key, key, { mode: 0o600 });
       fs.writeFileSync(paths.cert, cert);
       contexts.delete(domain);
+      retryAfter.delete(domain);
       domains.update(domain, { issuedAt: Date.now(), lastError: null, names: usable });
       log(`${domain} pronto em https`);
     } catch (err) {
+      const previous = retryAfter.get(domain);
+      const attempt = (previous?.attempt ?? 0) + 1;
+      const delay = Math.min(RETRY_BASE_MS * 2 ** (attempt - 1), RETRY_MAX_MS);
+      retryAfter.set(domain, { attempt, until: Date.now() + delay });
+
       log(`falha em ${domain}: ${err.message}`);
+      log(`próxima tentativa em ${Math.round(delay / 60000)}min`);
       domains.update(domain, { lastError: err.message });
     } finally {
       issuing.delete(domain);
@@ -265,9 +281,14 @@ export function createProxy({ log = console.log } = {}) {
 
     // reage na hora a um `pr register`
     const file = path.join(store.HOME, 'domains.json');
+    let debounce = null;
     fs.watchFile(file, { interval: 1000 }, () => {
-      log('domínios mudaram, reavaliando');
-      reconcile().catch((e) => log(e.message));
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        log('domínios mudaram, reavaliando');
+        reconcile().catch((e) => log(e.message));
+      }, 2000);
+      debounce.unref?.();
     });
 
     return { plain, secure };

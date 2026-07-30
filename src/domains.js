@@ -44,9 +44,17 @@ export function add({ domain, process: proc, www = true }) {
 
 export function update(domain, patch) {
   const d = normalize(domain);
-  const domains = all().map((b) => (b.domain === d ? { ...b, ...patch } : b));
-  save(domains);
-  return domains.find((b) => b.domain === d) || null;
+  const current = all();
+  const before = current.find((b) => b.domain === d);
+  if (!before) return null;
+
+  const after = { ...before, ...patch };
+  // gravar sem mudança nada acorda quem observa o arquivo — e o proxy observa
+  const changed = Object.keys(patch).some((k) => before[k] !== after[k]);
+  if (!changed) return before;
+
+  save(current.map((b) => (b.domain === d ? after : b)));
+  return after;
 }
 
 export function remove(domain) {

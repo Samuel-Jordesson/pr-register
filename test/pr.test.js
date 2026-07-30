@@ -89,3 +89,40 @@ test('o CSR gerado é aceito pelo openssl', async () => {
   assert.match(text, /CN\s*=\s*exemplo\.com\.br/);
   assert.match(text, /DNS:exemplo\.com\.br, DNS:www\.exemplo\.com\.br/);
 });
+
+test('update não regrava quando nada muda', async (t) => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-test-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+
+  // processo separado: os módulos leem PR_HOME uma vez, na carga
+  const out = execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
+      const fs = await import('node:fs');
+      const d = await import('${path.resolve('src/domains.js')}');
+      d.add({ domain: 'exemplo.com', process: 'app' });
+      const file = '${path.join(home, 'domains.json')}';
+      const before = fs.statSync(file).mtimeMs;
+      d.update('exemplo.com', { lastError: 'falhou' });
+      const changed = fs.statSync(file).mtimeMs;
+      await new Promise((r) => setTimeout(r, 20));
+      d.update('exemplo.com', { lastError: 'falhou' });
+      const again = fs.statSync(file).mtimeMs;
+      console.log(JSON.stringify({ gravouMudanca: changed !== before, regravouIgual: again !== changed }));
+      `,
+    ],
+    { env: { ...process.env, PR_HOME: home }, encoding: 'utf8' }
+  );
+
+  const result = JSON.parse(out.trim().split('\n').pop());
+  assert.equal(result.gravouMudanca, true, 'mudança real deve gravar');
+  assert.equal(result.regravouIgual, false, 'valor igual não deve regravar');
+});
