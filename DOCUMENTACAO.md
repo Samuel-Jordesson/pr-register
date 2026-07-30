@@ -7,6 +7,7 @@ Tudo sobre o projeto num lugar só: o que é, como instalar, como usar no dia a 
 - [O que é](#o-que-é)
 - [Instalação](#instalação)
 - [Uso do dia a dia](#uso-do-dia-a-dia)
+  - [O menu interativo](#o-menu-interativo)
 - [Domínio próprio e HTTPS](#domínio-próprio-e-https)
 - [Referência de comandos](#referência-de-comandos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
@@ -87,6 +88,28 @@ npm error File exists: /usr/bin/pr
 O lançador **fixa o caminho do Node usado na instalação**. Isso é proposital: faz o `pr` funcionar igual com `sudo`, com `nvm`, ou em qualquer configuração de `PATH`, sem depender do prefixo global do npm. Se você trocar de versão do Node depois, rode o instalador de novo para regravar o lançador.
 
 ## Uso do dia a dia
+
+### O menu interativo
+
+Digitando só `pr`, sem argumentos, abre uma tela de escolha:
+
+```
+  PR System v0.1.0
+  o que você quer fazer?
+
+  → registrar domínio         publica um projeto num domínio seu, com https
+    rodar projeto             sobe um projeto em segundo plano
+    conectar via Cloudflare   em breve
+    sair
+
+  ↑ ↓ para navegar · enter para escolher · esc para sair
+```
+
+- **registrar domínio** — o mesmo fluxo do `pr register`.
+- **rodar projeto** — pergunta a pasta do projeto (enter aceita a pasta atual; aceita `~`, caminho relativo ou absoluto) e o comando de inicialização. O comando vem sugerido: se houver `package.json`, o `pr` propõe `npm run dev`/`start`/`serve` conforme os scripts existentes; senão reconhece `manage.py`, `artisan`, `go.mod`, `Cargo.toml` ou `index.html` e sugere o comando típico de cada um. Enter aceita a sugestão.
+- **conectar via Cloudflare** — ainda não implementado; por ora avisa e aponta para o `pr register`.
+
+O menu só abre quando há terminal de verdade. Num pipe ou script (`pr | cat`, cron), `pr` sozinho cai na tela de ajuda, para não travar esperando uma tecla. `pr menu` força o menu.
 
 ### Subir um projeto
 
@@ -263,6 +286,7 @@ pr help        # ou: pr --help, pr -h, pr (sem argumentos)
 
 | Comando | Apelidos | O que faz |
 | --- | --- | --- |
+| `pr` | `menu` | abre o menu interativo |
 | `pr <comando...>` | | roda o comando na pasta atual, em segundo plano |
 | `pr start "<cmd>" -n <nome> [--cwd <pasta>]` | | mesmo, com nome e/ou pasta escolhidos |
 | `pr list` | `ls`, `status` | processos, porta, uptime, memória, restarts |
@@ -363,7 +387,9 @@ O proxy usa o arquivo assim que ele existir, sem precisar reiniciar.
 | --- | ---: | --- |
 | `install.sh` | ~185 | instalador de uma linha |
 | `bin/pr.js` | 8 | ponto de entrada do executável |
-| `src/cli.js` | ~416 | interpreta argumentos, chama os comandos, monta as telas |
+| `src/cli.js` | ~370 | interpreta argumentos, chama os comandos, monta as telas |
+| `src/menu.js` | ~130 | a tela que aparece ao digitar `pr` sozinho |
+| `src/start.js` | ~70 | sobe um projeto e reporta (usado pelo CLI e pelo menu) |
 | `src/runner.js` | ~150 | iniciar/parar/reiniciar/inspecionar processos |
 | `src/supervisor.js` | ~122 | processo destacado que mantém um comando vivo |
 | `src/proc.js` | ~171 | leitura de `/proc`, árvore de pids, portas em `LISTEN` |
@@ -410,6 +436,7 @@ Ao adicionar algo nesta área, o padrão do projeto é: nenhuma dependência nov
 ### Onde adicionar algo novo
 
 - **Novo subcomando** (tipo `pr algo`): adicione em `KNOWN` e no `switch` de `src/cli.js#main()`, e uma função `cmdAlgo()` ao lado das existentes. Adicione a linha correspondente em `help()`.
+- **Nova opção no menu**: `src/menu.js#cmdMenu()` — acrescente um item na lista passada ao `select()` e trate o valor devolvido. A implementação do Cloudflare entra em `cloudflareSoon()`.
 - **Mudar como uma porta é descoberta**: `src/proc.js#ports()` e `#portFromLog()`.
 - **Mudar o comportamento de restart/backoff**: `src/supervisor.js`, constantes `MAX_RESTARTS` e `MIN_UPTIME_MS`.
 - **Mudar o roteamento do proxy** (ex.: balanceamento entre várias portas do mesmo projeto): `src/proxy.js#bindingFor()` e `#targetPort()`.

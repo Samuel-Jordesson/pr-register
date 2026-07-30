@@ -1,10 +1,11 @@
 // Interface de linha de comando do `pr`.
 
 import fs from 'node:fs';
-import path from 'node:path';
 import * as store from './store.js';
 import * as runner from './runner.js';
 import * as domainsCli from './register.js';
+import { cmdMenu, isMenuAvailable } from './menu.js';
+import { startAndReport, shortenPath } from './start.js';
 import { c, tableLines, box, RULE, symbols, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
 
 const VERSION = '0.1.0';
@@ -12,13 +13,15 @@ const VERSION = '0.1.0';
 const KNOWN = new Set([
   'start', 'list', 'ls', 'status', 'stop', 'kill', 'restart', 'logs', 'log',
   'info', 'show', 'delete', 'rm', 'del', 'help', 'clean',
-  'register', 'domains', 'unregister', 'unlink', 'proxy',
+  'register', 'domains', 'unregister', 'unlink', 'proxy', 'menu',
 ]);
 
 export async function main(argv) {
   const [first, ...rest] = argv;
 
-  if (!first || first === 'help' || first === '--help' || first === '-h') return help();
+  if (!first) return isMenuAvailable() ? cmdMenu() : help();
+  if (first === 'help' || first === '--help' || first === '-h') return help();
+  if (first === 'menu') return cmdMenu();
   if (first === '--version' || first === '-v') return console.log(`pr ${VERSION}`);
 
   // qualquer coisa que não seja subcomando conhecido é o comando a rodar:
@@ -92,51 +95,7 @@ async function cmdStart(args) {
   }
 
   const command = rest.length === 1 ? rest[0] : rest.map(quote).join(' ');
-  const cwd = path.resolve(flags.cwd || process.cwd());
-
-  let proc;
-  try {
-    proc = runner.start(command, { cwd, name: flags.name });
-  } catch (err) {
-    fail(err.message);
-    process.exitCode = 1;
-    return;
-  }
-
-  console.log();
-  console.log(
-    box(
-      [
-        `${c.dim('comando')}  ${c.text(truncate(command, 48))}`,
-        `${c.dim('pasta')}    ${c.faint(shortenPath(cwd, 48))}`,
-      ],
-      { title: `${proc.name} iniciado` }
-    )
-  );
-  console.log();
-
-  const port = await runner.waitForPort(proc.name);
-  const final = runner.inspect(store.read(proc.name));
-
-  if (final.status === 'online' || final.status === 'starting') {
-    if (port) {
-      ok(`rodando em ${c.accent(c.underline(`http://localhost:${port}`))}`);
-    } else {
-      ok(`rodando em segundo plano ${c.faint(`(pid ${final.pid})`)}`);
-    }
-    console.log(
-      `  ${c.faint(`logs: pr logs ${proc.name} -f   ·   parar: pr stop ${proc.name}`)}`
-    );
-  } else {
-    fail(`"${proc.name}" não ficou de pé (${final.status})`);
-    const tail = runner.tailText(proc.name, 2000).trimEnd().split('\n').slice(-8);
-    if (tail.length) {
-      console.log();
-      for (const line of tail) console.log(`  ${c.faint('│')} ${line}`);
-    }
-    process.exitCode = 1;
-  }
-  console.log();
+  await startAndReport({ command, cwd: flags.cwd, name: flags.name });
 }
 
 function cmdList() {
@@ -348,13 +307,6 @@ function colorStatus(status) {
   return c.yellow(status);
 }
 
-function shortenPath(p, max = Infinity) {
-  const home = process.env.HOME;
-  const short = home && p.startsWith(home) ? '~' + p.slice(home.length) : p;
-  // em caminho longo o fim importa mais que o começo
-  return short.length <= max ? short : '…' + short.slice(short.length - max + 1);
-}
-
 function quote(arg) {
   return /[\s"'$`\\|&;<>()*?[\]{}!#~]/.test(arg) ? `'${arg.replace(/'/g, `'\\''`)}'` : arg;
 }
@@ -368,6 +320,7 @@ function help() {
     '',
     `  ${c.bold(c.accent('pr'))} ${c.faint(`v${VERSION}`)} ${c.dim('— rode seus projetos em segundo plano e publique num domínio')}`,
     section('USO'),
+    cmd('pr', 'abre o menu: registrar domínio, rodar projeto…'),
     cmd('pr <comando...>', 'roda o comando na pasta atual, em segundo plano'),
     cmd('pr <subcomando> [alvo]', 'os subcomandos abaixo'),
     `\n  ${c.faint('O alvo de qualquer subcomando pode ser o nome, o id ou um prefixo:')}`,

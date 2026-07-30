@@ -4,6 +4,24 @@ Rode qualquer projeto em segundo plano com um comando, veja em que porta ele sub
 
 Documentação completa (uso, instalação, arquitetura interna e como mexer no código): [DOCUMENTACAO.md](DOCUMENTACAO.md).
 
+Digite `pr` sozinho e escolha pelo menu:
+
+```
+$ pr
+
+  PR System v0.1.0
+  o que você quer fazer?
+
+  → registrar domínio         publica um projeto num domínio seu, com https
+    rodar projeto             sobe um projeto em segundo plano
+    conectar via Cloudflare   em breve
+    sair
+
+  ↑ ↓ para navegar · enter para escolher · esc para sair
+```
+
+Ou vá direto ao ponto pela linha de comando:
+
 ```
 $ cd meu-projeto
 $ pr npm run dev
@@ -110,6 +128,7 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 
 | Comando | O que faz |
 | --- | --- |
+| `pr` | abre o menu interativo (`pr menu` força, mesmo com pipe) |
 | `pr <comando>` | roda o comando em segundo plano, nomeado pela pasta atual |
 | `pr start <cmd> -n api` | idem, com nome escolhido (`--cwd` muda a pasta) |
 | `pr list` | tudo que está rodando, com porta, uptime, memória e restarts |

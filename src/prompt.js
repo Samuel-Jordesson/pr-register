@@ -1,6 +1,6 @@
 // Seleção com setas e entrada de texto, direto no TTY. Sem dependências.
 
-import { c, symbols } from './ui.js';
+import { c, symbols, width } from './ui.js';
 
 const KEYS = {
   up: ['\u001b[A', 'k'],
@@ -31,6 +31,7 @@ export function select(items, { title = 'escolha', footer = '↑ ↓ para navega
 
     const render = () => {
       if (drawn) process.stdout.write(`\u001b[${drawn}A\u001b[0J`);
+      const largura = Math.max(...items.map((item) => width(item.label)));
       const lines = [
         `  ${c.faint(title)}`,
         '',
@@ -38,7 +39,8 @@ export function select(items, { title = 'escolha', footer = '↑ ↓ para navega
           const active = i === cursor;
           const mark = active ? c.accent(symbols.arrow) : ' ';
           const label = active ? c.accent(item.label) : c.text(item.label);
-          return `  ${mark} ${label}${item.hint ? `  ${c.faint(item.hint)}` : ''}`;
+          const espaco = ' '.repeat(largura - width(item.label));
+          return `  ${mark} ${label}${item.hint ? `${espaco}   ${c.faint(item.hint)}` : ''}`;
         }),
         '',
         `  ${c.faint(footer)}`,
@@ -55,14 +57,24 @@ export function select(items, { title = 'escolha', footer = '↑ ↓ para navega
       resolve(value);
     };
 
+    // um chunk pode trazer várias teclas de uma vez (setas repetidas, paste)
     const onData = (buf) => {
-      const key = buf.toString();
-      if (KEYS.cancel.includes(key)) return done(null);
-      if (KEYS.enter.includes(key)) return done(items[cursor].value);
-      if (KEYS.up.includes(key)) cursor = (cursor - 1 + items.length) % items.length;
-      else if (KEYS.down.includes(key)) cursor = (cursor + 1) % items.length;
-      else return;
-      render();
+      const keys = buf.toString().match(/\u001b\[[A-Z]|./gs) || [];
+      let moved = false;
+
+      for (const key of keys) {
+        if (KEYS.cancel.includes(key)) return done(null);
+        if (KEYS.enter.includes(key)) return done(items[cursor].value);
+        if (KEYS.up.includes(key)) {
+          cursor = (cursor - 1 + items.length) % items.length;
+          moved = true;
+        } else if (KEYS.down.includes(key)) {
+          cursor = (cursor + 1) % items.length;
+          moved = true;
+        }
+      }
+
+      if (moved) render();
     };
 
     raw(true);
@@ -74,13 +86,14 @@ export function select(items, { title = 'escolha', footer = '↑ ↓ para navega
 
 /**
  * Lê uma linha de texto. Enter confirma, esc/ctrl+c cancela (null).
+ * Com `defaultValue`, enter em branco devolve esse valor.
  */
-export function ask(question, { placeholder = '' } = {}) {
+export function ask(question, { placeholder = '', defaultValue = '' } = {}) {
   return new Promise((resolve) => {
     let value = '';
 
     const render = () => {
-      const shown = value || c.faint(placeholder);
+      const shown = value || c.faint(placeholder || defaultValue);
       process.stdout.write(`\u001b[2K\r  ${c.accent('?')} ${c.text(question)} ${shown}`);
     };
 
@@ -98,7 +111,7 @@ export function ask(question, { placeholder = '' } = {}) {
       for (let i = 0; i < chunk.length; i++) {
         const ch = chunk[i];
         if (ch === '\u0003' || ch === '\u001b') return done(null);
-        if (ch === '\r' || ch === '\n') return done(value.trim());
+        if (ch === '\r' || ch === '\n') return done(value.trim() || defaultValue);
         if (ch === '\u007f' || ch === '\b') value = value.slice(0, -1);
         else if (ch >= ' ') value += ch;
       }
