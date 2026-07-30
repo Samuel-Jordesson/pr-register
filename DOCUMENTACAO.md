@@ -95,22 +95,19 @@ O lançador **fixa o caminho do Node usado na instalação**. Isso é proposital
 Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
 ```
-╭─ PR System ────────────────────────────────────────────────────────╮
-│                        ████████████████████████                     │
-│                      ███████████████████████████                    │
-│                    █████████████████████████████                    │
-│                    ▓████████              ███████                   │
-│                    ███████                ███████                   │
-│                          (a marca em blocos)                        │
-│                    ████████████████████████████                     │
-│                     ██████████████████████████                      │
-│                      ████████████████████████                       │
-│                                                                     │
-│ Rode qualquer projeto em segundo plano e publique                   │
-│ cada um no seu próprio domínio, com HTTPS automático.               │
-│                                                                     │
-│ versão 0.1.0  · zero dependências  · pr help para todos os comandos │
-╰─────────────────────────────────────────────────────────────────────╯
+╭─ PR System ──────────────────────────────────────────────────────────╮
+│ ██████╗ ██████╗ ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗ │
+│ ██╔══██╗██╔══██╗██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║ │
+│ ██████╔╝██████╔╝███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║ │
+│ ██╔═══╝ ██╔══██╗╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║ │
+│ ██║     ██║  ██║███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║ │
+│ ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝ │
+│                                                                       │
+│ Rode qualquer projeto em segundo plano e publique                     │
+│ cada um no seu próprio domínio, com HTTPS automático.                 │
+│                                                                       │
+│ versão 0.1.0  · zero dependências  · pr help para todos os comandos   │
+╰───────────────────────────────────────────────────────────────────────╯
 
   o que você quer fazer?
 
@@ -126,7 +123,7 @@ Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 - **rodar projeto** — pergunta a pasta do projeto (enter aceita a pasta atual; aceita `~`, caminho relativo ou absoluto) e o comando de inicialização. O comando vem sugerido: se houver `package.json`, o `pr` propõe `npm run dev`/`start`/`serve` conforme os scripts existentes; senão reconhece `manage.py`, `artisan`, `go.mod`, `Cargo.toml` ou `index.html` e sugere o comando típico de cada um. Enter aceita a sugestão.
 - **conectar via Cloudflare** — publica o projeto por um túnel da Cloudflare, sem precisar de IP público nem das portas 80/443. Veja [Cloudflare Tunnel](#cloudflare-tunnel).
 
-A marca em blocos ocupa 22 linhas: em terminal com menos de 34 linhas ela é omitida, para não empurrar as opções para fora da tela — o resto do cabeçalho continua igual.
+A marca tem 69 colunas: em terminal mais estreito que isso ela é omitida, porque cortada ao meio ficaria pior que ausente — o resto do cabeçalho continua igual.
 
 O menu só abre quando há terminal de verdade. Num pipe ou script (`pr | cat`, cron), `pr` sozinho cai na tela de ajuda, para não travar esperando uma tecla. `pr menu` força o menu.
 

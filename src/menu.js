@@ -11,31 +11,17 @@ import { c, box, width, info, fail } from './ui.js';
 const VERSION = '0.1.0';
 
 
-/** A marca do PR System em blocos, para o cabeçalho do menu. */
+/** A marca do PR System, em arte de terminal. */
 const LOGO = [
-  '    ████████████████████████',
-  '   ███████████████████████████',
-  ' █████████████████████████████',
-  ' ▓████████              ███████',
-  ' ███████                ███████',
-  '███████                 ███████',
-  '██████                  ███████',
-  '██████▓                 ███████',
-  '███████████            ▓███████',
-  '██████████████▓      ██████████',
-  '██████████████     ████████████',
-  '████████████    ▓██████████████',
-  '█████████      ████████████████',
-  '██████▓              ██████████',
-  '██████                  ███████',
-  '██████                  ███████',
-  '██████                 ████████',
-  '██████                ████████',
-  '██████              █████████',
-  '████████████████████████████',
-  '██████████████████████████',
-  '████████████████████████',
+  '██████╗ ██████╗ ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗',
+  '██╔══██╗██╔══██╗██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║',
+  '██████╔╝██████╔╝███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║',
+  '██╔═══╝ ██╔══██╗╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║',
+  '██║     ██║  ██║███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║',
+  '╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝',
 ];
+
+const LOGO_LARGURA = Math.max(...LOGO.map((l) => l.length));
 
 const TAGLINE = [
   'Rode qualquer projeto em segundo plano e publique',
@@ -47,11 +33,11 @@ const TAGLINE = [
  * e roubaria a tela das opções, então some e fica só o texto.
  */
 function header() {
-  const cabe = (process.stdout.rows || 24) >= 34;
+  // a arte só entra se couber inteira: cortada ao meio fica pior que ausente
+  const cabe = (process.stdout.columns || 80) >= LOGO_LARGURA + 6 && (process.stdout.rows || 24) >= 18;
 
   const rodape = `${c.faint('versão')} ${c.dim(VERSION)}  ${c.faint('·')} ${c.faint('zero dependências')}  ${c.faint('·')} ${c.faint('pr help para todos os comandos')}`;
-  const texto = [...TAGLINE, width(rodape) ? rodape : ''];
-  const largura = Math.max(...texto.map(width), ...(cabe ? LOGO.map((l) => l.length) : [0]));
+  const largura = Math.max(width(rodape), ...TAGLINE.map(width), cabe ? LOGO_LARGURA : 0);
   const centralizar = (linha) =>
     ' '.repeat(Math.max(0, Math.floor((largura - linha.length) / 2))) + linha;
 
