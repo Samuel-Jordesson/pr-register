@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as store from './store.js';
 import * as runner from './runner.js';
 import * as domainsCli from './register.js';
-import { c, tableLines, box, RULE, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
+import { c, tableLines, box, RULE, symbols, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
 
 const VERSION = '0.1.0';
 
@@ -360,40 +360,57 @@ function quote(arg) {
 }
 
 function help() {
-  const cmd = (name, desc) => `${c.accent(name.padEnd(24))} ${c.dim(desc)}`;
-  console.log();
-  console.log(`  ${c.bold(c.accent('pr'))} ${c.faint(`v${VERSION}`)} ${c.dim('— rode seus projetos em segundo plano')}`);
-  console.log();
-  console.log(`  ${c.faint('USO')}`);
-  console.log(`    ${c.text('pr <comando>')}              ${c.dim('roda o comando em segundo plano')}`);
-  console.log();
-  console.log(`  ${c.faint('COMANDOS')}`);
-  for (const line of [
-    cmd('pr npm run dev', 'sobe o projeto da pasta atual'),
-    cmd('pr start <cmd> -n api', 'sobe com um nome escolhido'),
-    cmd('pr list', 'lista o que está rodando e as portas'),
-    cmd('pr logs <nome> -f', 'acompanha os logs'),
-    cmd('pr info <nome>', 'detalhes de um processo'),
-    cmd('pr restart <nome|all>', 'reinicia'),
-    cmd('pr stop <nome|id|all>', 'para, mantendo no histórico'),
-    cmd('pr kill <nome|id>', 'o mesmo que stop'),
-    cmd('pr delete <nome|all>', 'para e remove, com os logs'),
-    cmd('pr clean', 'remove tudo que já parou'),
-  ]) {
-    console.log(`    ${line}`);
-  }
-  console.log();
-  console.log(`  ${c.faint('DOMÍNIOS')}`);
-  for (const line of [
-    cmd('pr register', 'liga um domínio a um projeto e mostra o DNS'),
-    cmd('pr domains', 'só a lista dos domínios, com o status de cada um'),
+  const section = (title) => `\n  ${c.faint(title)}\n`;
+  const cmd = (name, desc, { width = 32 } = {}) =>
+    `    ${c.accent(name.padEnd(width))} ${c.dim(desc)}`;
+
+  const out = [
+    '',
+    `  ${c.bold(c.accent('pr'))} ${c.faint(`v${VERSION}`)} ${c.dim('— rode seus projetos em segundo plano e publique num domínio')}`,
+    section('USO'),
+    cmd('pr <comando...>', 'roda o comando na pasta atual, em segundo plano'),
+    cmd('pr <subcomando> [alvo]', 'os subcomandos abaixo'),
+    `\n  ${c.faint('O alvo de qualquer subcomando pode ser o nome, o id ou um prefixo:')}`,
+    `  ${c.faint('pr stop api · pr stop 0 · pr logs ap · pr restart all')}`,
+    section('RODAR'),
+    cmd('pr npm run dev', 'sobe o projeto da pasta atual; o nome vem da pasta'),
+    cmd('pr python3 -m http.server 3000', 'funciona com qualquer comando, não só npm'),
+    cmd('pr start "<cmd>" -n api', 'nome escolhido; use aspas se tiver && | >'),
+    cmd('pr start "<cmd>" --cwd <pasta>', 'roda em outra pasta'),
+    section('ACOMPANHAR'),
+    cmd('pr list', 'o que está rodando: porta, uptime, memória, restarts'),
+    cmd('pr info <alvo>', 'tudo de um processo, incluindo o caminho do log'),
+    cmd('pr logs <alvo>', 'as últimas 30 linhas do log'),
+    cmd('pr logs <alvo> -f', 'acompanha o log ao vivo (ctrl+c para sair)'),
+    cmd('pr logs <alvo> -n 100', 'quantas linhas mostrar'),
+    section('CONTROLAR'),
+    cmd('pr restart <alvo|all>', 'para e sobe de novo, com o mesmo comando'),
+    cmd('pr stop <alvo|all>', 'para, mas mantém na lista como stopped'),
+    cmd('pr kill <alvo|all>', 'o mesmo que stop'),
+    cmd('pr delete <alvo|all>', 'para, tira da lista e apaga os logs'),
+    cmd('pr clean', 'apaga da lista tudo que já está parado'),
+    section('DOMÍNIOS'),
+    cmd('pr register', 'escolhe um projeto, pede o domínio e mostra o DNS'),
+    cmd('pr domains', 'só a lista dos domínios e a situação de cada um'),
     cmd('pr unregister <dominio>', 'desliga o domínio e apaga o certificado'),
-    cmd('pr proxy status|start|stop', 'o proxy que atende as portas 80 e 443'),
-    cmd('pr proxy logs [-f]', 'o que o proxy e o Let\'s Encrypt estão fazendo'),
-  ]) {
-    console.log(`    ${line}`);
-  }
-  console.log();
-  console.log(`  ${c.faint('Nome, id ou prefixo funcionam como alvo: pr stop 0, pr logs ap')}`);
-  console.log();
+    cmd('pr proxy status', 'o proxy está no ar? em que ip e portas?'),
+    cmd('pr proxy start', 'sobe o proxy das portas 80 e 443'),
+    cmd('pr proxy stop', 'derruba o proxy'),
+    cmd('pr proxy logs [-f] [n]', "o que o proxy e o Let's Encrypt andam fazendo"),
+    `\n  ${c.faint('Na lista de domínios a bolinha diz o que falta:')}`,
+    `  ${c.red(symbols.bullet)} ${c.faint('o DNS ainda não aponta para cá, ou o projeto caiu')}`,
+    `  ${c.yellow(symbols.bullet)} ${c.faint('DNS certo, certificado a caminho (ou um aviso a resolver)')}`,
+    `  ${c.green(symbols.bullet)} ${c.faint('pronto, servindo em https')}`,
+    section('OUTROS'),
+    cmd('pr help', 'esta tela'),
+    cmd('pr --version', 'a versão instalada'),
+    `\n  ${c.faint('Apelidos: ls e status = list · log = logs · show = info · rm = delete · unlink = unregister')}`,
+    section('VARIÁVEIS DE AMBIENTE'),
+    cmd('PR_HOME', 'onde guardar estado e logs (padrão ~/.pr)'),
+    cmd('PR_HTTP_PORT · PR_HTTPS_PORT', 'portas do proxy (padrão 80 e 443)'),
+    cmd('PR_ACME_DIRECTORY', "outro servidor ACME, ex. o staging do Let's Encrypt"),
+    '',
+  ];
+
+  console.log(out.join('\n'));
 }
