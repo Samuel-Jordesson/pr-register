@@ -180,6 +180,80 @@ Os domínios ficam em `~/.pr/domains.json` e os certificados em `~/.pr/certs/<do
 
 Defina `PR_HOME` para usar outro diretório de estado (útil em testes).
 
+## Problemas comuns
+
+### `EEXIST: file already exists /usr/bin/pr`
+
+O nome `pr` já é do paginador do GNU coreutils. Explicado na seção de instalação — resumo: instale com `--prefix /usr/local` e nunca com `--force`.
+
+```bash
+sudo npm install -g . --prefix /usr/local
+```
+
+### `EACCES` ao subir o proxy
+
+No Linux só o root abre portas abaixo de 1024, e o proxy precisa da 80 (é lá que o Let's Encrypt bate para validar o domínio) e da 443. Escolha um:
+
+```bash
+sudo setcap 'cap_net_bind_service=+ep' $(which node)   # dá ao node o direito de abrir portas baixas
+pr proxy start
+```
+
+```bash
+sudo pr proxy start                                     # ou roda o proxy como root
+```
+
+O `setcap` é a opção mais contida: concede só essa capacidade ao binário do node, em vez de rodar tudo como root. Refaça o comando quando trocar de versão do Node (o caminho do binário muda). Para testar sem privilégio nenhum:
+
+```bash
+PR_HTTP_PORT=8080 PR_HTTPS_PORT=8443 pr proxy start
+```
+
+### A bolinha do domínio não fica verde
+
+Rode `pr register` para ver o motivo em texto, e `pr proxy logs` para o detalhe. Por ordem de probabilidade:
+
+- **`DNS ainda não resolve` / `DNS aponta para outro IP`** — o registro A não foi salvo, ainda está propagando, ou aponta para outro lugar. Confira com `dig +short seudominio.com.br` e compare com o IP que o `pr proxy status` mostra. Propagação leva de minutos a algumas horas; enquanto isso o `pr` não tenta emitir nada, justamente para não gastar as tentativas do Let's Encrypt.
+- **Se a Hostinger estiver com o proxy/CDN dela ligado**, o DNS vai resolver para o IP *dela*, não o seu, e a validação falha. Desligue o proxy do domínio ou aponte o A direto para o VPS.
+- **Porta 80 fechada** — o desafio HTTP-01 é uma requisição da internet para `http://seudominio/.well-known/acme-challenge/...`. Precisa estar aberta no firewall do sistema **e** no painel do provedor (security group / firewall do VPS), que são coisas separadas:
+
+```bash
+sudo ufw allow 80 && sudo ufw allow 443
+curl -I http://seudominio.com.br/.well-known/acme-challenge/teste   # de fora do servidor
+```
+
+- **`too many failed authorizations`** — o Let's Encrypt limita as tentativas com erro (5 por hora por domínio). Espere ou teste apontando para o staging, que tem limites folgados:
+
+```bash
+PR_ACME_DIRECTORY=https://acme-staging-v02.api.letsencrypt.org/directory pr proxy start
+```
+
+O certificado do staging não é aceito pelos navegadores — serve só para confirmar que o fluxo funciona. Apague `~/.pr/certs/<dominio>` antes de emitir o de produção.
+
+### `502` no navegador, ou `"projeto" não está no ar`
+
+O proxy achou o domínio mas não achou o projeto atrás dele. Veja `pr list`:
+
+- coluna `PORTA` vazia — o projeto não abriu porta nenhuma, ou escuta num endereço que o `pr` não enxerga. Faça o app escutar em `0.0.0.0` ou `127.0.0.1`, não num IP externo específico;
+- status `errored` ou `restarting` — o comando está caindo; `pr logs <nome>` mostra o motivo.
+
+### `404 nenhum projeto registrado para este domínio`
+
+O `Host` que chegou não casa com nenhum domínio do `pr register`. Costuma ser acesso pelo IP puro (sem domínio) ou um subdomínio de um domínio que você não registrou.
+
+### O projeto some depois de reiniciar o VPS
+
+Ainda não há integração com o systemd: os processos e o proxy não voltam sozinhos. Depois do boot:
+
+```bash
+pr proxy start
+cd ~/meu-projeto && pr npm run dev
+```
+
+### `pr` não é o comando certo
+
+Se `which pr` responder `/usr/bin/pr`, o do coreutils está na frente. Confira a ordem do PATH (`echo $PATH`) — `/usr/local/bin` precisa vir antes de `/usr/bin` — ou chame por um nome só seu, como descrito na instalação.
+
 ## Testes
 
 ```bash
