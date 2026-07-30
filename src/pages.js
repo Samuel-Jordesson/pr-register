@@ -74,6 +74,7 @@ export function page({ title, message, detail = '' }) {
     max-width: 52ch;
     margin: 0;
   }
+  .host { color: rgba(255, 255, 255, 0.72); }
   code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px;
@@ -116,11 +117,13 @@ export function notFound(host) {
   return (
     override(404) ??
     page({
-      title: 'Nada publicado aqui',
-      message: 'Nenhum projeto está publicado neste endereço.',
-      detail: host
-        ? `${escape(host)} ainda não foi ligado a um projeto. No servidor: <code>pr register</code>`
-        : 'Ligue um projeto a este endereço com <code>pr register</code>',
+      title: 'RP System',
+      message: 'O RP System coloca seus projetos no ar e publica cada um no seu próprio domínio, com HTTPS automático.',
+      detail:
+        'Um comando sobe o projeto em segundo plano, descobre em que porta ele subiu e o mantém rodando mesmo depois que você fecha o terminal. ' +
+        'Outro liga um domínio a esse projeto: o certificado é emitido e renovado sozinho, e vários domínios convivem no mesmo servidor.' +
+        `<br><br>${host ? `<span class="host">${escape(host)}</span> ainda não` : 'Este endereço ainda não'} está ligado a nenhum projeto. ` +
+        'No servidor: <code>pr register</code>',
     })
   );
 }
