@@ -5,6 +5,7 @@ import * as store from './store.js';
 import * as runner from './runner.js';
 import * as domainsCli from './register.js';
 import { cmdMenu, isMenuAvailable } from './menu.js';
+import { cmdCloudflare } from './cftunnel.js';
 import { startAndReport, shortenPath } from './start.js';
 import { c, tableLines, box, RULE, symbols, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
 
@@ -14,6 +15,7 @@ const KNOWN = new Set([
   'start', 'list', 'ls', 'status', 'stop', 'kill', 'restart', 'logs', 'log',
   'info', 'show', 'delete', 'rm', 'del', 'help', 'clean',
   'register', 'domains', 'unregister', 'unlink', 'proxy', 'menu',
+  'cloudflare', 'cf',
 ]);
 
 export async function main(argv) {
@@ -60,6 +62,9 @@ export async function main(argv) {
       return domainsCli.cmdUnregister(rest);
     case 'proxy':
       return domainsCli.cmdProxy(rest);
+    case 'cloudflare':
+    case 'cf':
+      return cmdCloudflare(rest);
     default:
       return help();
   }
@@ -350,6 +355,11 @@ function help() {
     cmd('pr proxy start', 'sobe o proxy das portas 80 e 443'),
     cmd('pr proxy stop', 'derruba o proxy'),
     cmd('pr proxy logs [-f] [n]', "o que o proxy e o Let's Encrypt andam fazendo"),
+    '',
+    cmd('pr cloudflare', 'publica por túnel da Cloudflare (sem IP público)'),
+    cmd('pr cloudflare list', 'os túneis criados e a situação de cada um'),
+    cmd('pr cloudflare sync', 'reescreve os túneis com as portas atuais'),
+    cmd('pr cloudflare login|logout', 'troca ou remove a credencial da conta'),
     `\n  ${c.faint('Na lista de domínios a bolinha diz o que falta:')}`,
     `  ${c.red(symbols.bullet)} ${c.faint('o DNS ainda não aponta para cá, ou o projeto caiu')}`,
     `  ${c.yellow(symbols.bullet)} ${c.faint('DNS certo, certificado a caminho (ou um aviso a resolver)')}`,

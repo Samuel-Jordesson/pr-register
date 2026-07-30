@@ -158,6 +158,9 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 | `pr unregister <dominio>` | desliga o domínio e apaga o certificado |
 | `pr proxy start\|stop\|status` | o proxy que atende as portas 80 e 443 |
 | `pr proxy logs [-f]` | o que o proxy e o Let's Encrypt andam fazendo |
+| `pr cloudflare` | publica por túnel da Cloudflare, sem IP público (apelido: `pr cf`) |
+| `pr cloudflare list\|sync` | túneis criados; `sync` reajusta as portas |
+| `pr cloudflare login\|logout` | credencial da conta Cloudflare |
 
 O alvo pode ser o nome, o id numérico ou um prefixo único: `pr stop 0`, `pr logs meu`.
 
@@ -230,6 +233,26 @@ Para testar sem tocar nas portas privilegiadas: `PR_HTTP_PORT=8080 PR_HTTPS_PORT
 - o projeto escutando em `127.0.0.1` ou `0.0.0.0` na porta que aparece no `pr list`.
 
 Use `PR_ACME_DIRECTORY` para apontar ao staging do Let's Encrypt enquanto testa — os limites de emissão do ambiente de produção são baixos.
+
+## Publicando por túnel da Cloudflare
+
+Se o servidor não tem IP público, está atrás de NAT/CGNAT, ou você simplesmente não quer abrir portas, dá para publicar por um túnel:
+
+```bash
+pr cloudflare
+```
+
+Ele pede um API Token da Cloudflare na primeira vez (ou a Global API Key), lista seus projetos rodando, lista seus domínios da conta, e faz o resto sozinho: baixa o `cloudflared` se faltar, cria o túnel, grava a configuração, cria o `CNAME` e sobe o conector como um processo do próprio `pr`.
+
+```
+  → criando o túnel pr-meuapp
+  → apontando efflar.com para o túnel
+  → subindo o conector
+
+  ✔ https://efflar.com → meuapp (porta 5055)
+```
+
+O certificado nesse caminho é da Cloudflare — não passa pelo Let's Encrypt nem pelas portas 80/443. Detalhes, permissões do token e manutenção: [DOCUMENTACAO.md](DOCUMENTACAO.md#cloudflare-tunnel).
 
 ## Como funciona
 

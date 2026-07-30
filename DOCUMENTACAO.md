@@ -9,6 +9,7 @@ Tudo sobre o projeto num lugar só: o que é, como instalar, como usar no dia a 
 - [Uso do dia a dia](#uso-do-dia-a-dia)
   - [O menu interativo](#o-menu-interativo)
 - [Domínio próprio e HTTPS](#domínio-próprio-e-https)
+- [Cloudflare Tunnel](#cloudflare-tunnel)
 - [Referência de comandos](#referência-de-comandos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Onde tudo fica guardado](#onde-tudo-fica-guardado-e-o-formato)
@@ -123,7 +124,7 @@ Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
 - **registrar domínio** — o mesmo fluxo do `pr register`.
 - **rodar projeto** — pergunta a pasta do projeto (enter aceita a pasta atual; aceita `~`, caminho relativo ou absoluto) e o comando de inicialização. O comando vem sugerido: se houver `package.json`, o `pr` propõe `npm run dev`/`start`/`serve` conforme os scripts existentes; senão reconhece `manage.py`, `artisan`, `go.mod`, `Cargo.toml` ou `index.html` e sugere o comando típico de cada um. Enter aceita a sugestão.
-- **conectar via Cloudflare** — ainda não implementado; por ora avisa e aponta para o `pr register`.
+- **conectar via Cloudflare** — publica o projeto por um túnel da Cloudflare, sem precisar de IP público nem das portas 80/443. Veja [Cloudflare Tunnel](#cloudflare-tunnel).
 
 A marca em blocos ocupa 22 linhas: em terminal com menos de 34 linhas ela é omitida, para não empurrar as opções para fora da tela — o resto do cabeçalho continua igual.
 
@@ -294,6 +295,101 @@ PR_HTTP_PORT=8080 PR_HTTPS_PORT=8443 pr proxy start
 - o projeto escutando em `0.0.0.0` ou `127.0.0.1`, na porta que aparece no `pr list`;
 - **um único registro A** por domínio, apontando para o IP do servidor (dois registros A no mesmo nome fazem o Let's Encrypt sortear qual IP validar, e a emissão falha de forma intermitente — o `pr register` avisa isso na coluna de situação).
 
+## Cloudflare Tunnel
+
+É o segundo caminho para publicar um projeto — alternativa ao `pr register`. Em vez de o mundo bater na porta 80 do seu servidor, o `cloudflared` abre uma conexão de dentro para fora e a Cloudflare entrega o tráfego por ela.
+
+Quando isso vale mais a pena que o `pr register`:
+
+| | `pr register` (proxy próprio) | `pr cloudflare` (túnel) |
+| --- | --- | --- |
+| IP público no servidor | necessário | **dispensável** |
+| portas 80/443 abertas | necessárias | **dispensáveis** |
+| roda atrás de NAT/CGNAT, casa, Wi-Fi | não | **sim** |
+| certificado | Let's Encrypt, emitido pelo `pr` | da Cloudflare, automático |
+| domínio precisa estar | em qualquer registrador | **na Cloudflare** |
+| dependência externa | nenhuma | `cloudflared` + conta Cloudflare |
+
+### Usando
+
+```bash
+pr cloudflare          # ou pelo menu: pr → conectar via Cloudflare
+```
+
+Na primeira vez ele pede a credencial. Duas formas:
+
+- **API Token** (recomendado) — crie em <https://dash.cloudflare.com/profile/api-tokens>, em *Create Custom Token*, com estas permissões:
+  - `Account` · Cloudflare Tunnel · **Edit**
+  - `Zone` · DNS · **Edit**
+  - `Zone` · Zone · **Read**
+- **Global API Key** — e-mail + chave; dá acesso total à conta, então prefira o token.
+
+A credencial fica em `~/.pr/cloudflare.json` com permissão `600`. Ela é validada na hora (e a cada uso), e a conta é descoberta sozinha — se você tiver mais de uma, o `pr` pergunta qual.
+
+Com a credencial no lugar, o fluxo é direto:
+
+1. escolha o projeto (só aparecem os que estão no ar, com a porta detectada);
+2. escolha o domínio (a lista vem das zonas ativas da sua conta Cloudflare);
+3. informe o endereço — enter usa o domínio raiz, ou digite `app.seudominio.com`;
+4. o `pr` faz o resto.
+
+O "resto" é: baixar o `cloudflared` se faltar, criar o túnel na sua conta, gravar as credenciais e o `config.yml`, criar o registro `CNAME` apontando para `<id>.cfargotunnel.com` (proxied), e subir o conector como um processo gerenciado pelo próprio `pr`.
+
+```
+  → criando o túnel pr-meuapp
+  → configuração escrita em ~/.pr/cloudflare/<id>.yml
+  → apontando efflar.com para o túnel
+  → subindo o conector
+
+  ✔ https://efflar.com → meuapp (porta 5055)
+```
+
+### Comandos
+
+| Comando | O que faz |
+| --- | --- |
+| `pr cloudflare` | o fluxo acima (apelido: `pr cf`) |
+| `pr cloudflare list` | endereços publicados e o estado de cada conector |
+| `pr cloudflare sync` | reescreve os túneis com as portas atuais e reinicia os conectores |
+| `pr cloudflare login` | troca a credencial |
+| `pr cloudflare logout` | apaga a credencial guardada |
+
+Na listagem, a bolinha diz o estado **real**, lido do log do conector:
+
+| | significado |
+| --- | --- |
+| 🟢 verde | conexão registrada na borda da Cloudflare — está servindo |
+| 🟡 amarelo | o conector subiu mas ainda não registrou (credencial recusada e rede bloqueada são as causas comuns) |
+| 🔴 vermelho | o conector está parado, ou o projeto caiu |
+
+### Como fica montado
+
+O conector é um processo comum do `pr`, chamado `cf-<projeto>` — aparece no `pr list`, reinicia sozinho se cair, e `pr logs cf-<projeto> -f` mostra o que ele está fazendo.
+
+```
+~/.pr/
+├── cloudflare.json              # credencial da conta (0600)
+├── bin/cloudflared              # binário, se o pr precisou baixar
+└── cloudflare/
+    ├── tunnels.json             # vínculos: hostname → projeto, porta, túnel
+    ├── <tunnel-id>.json         # credencial do túnel (0600)
+    └── <tunnel-id>.yml          # ingress: hostname → http://localhost:porta
+```
+
+É **um túnel por projeto** (`pr-<projeto>`). Publicar um segundo endereço no mesmo projeto reaproveita o túnel e acrescenta a rota ao mesmo `config.yml`, preservando as anteriores.
+
+O `cloudflared` é baixado sob demanda, direto do repositório oficial, para `~/.pr/bin` — sem `sudo` e sem disputar nada com o gerenciador de pacotes. Se você já tiver o `cloudflared` no `PATH`, o `pr` usa o seu.
+
+### Atenção à porta
+
+O `config.yml` aponta para a porta que o projeto tinha no momento da publicação. Se o projeto voltar numa porta diferente, o túnel passa a bater no lugar errado — rode:
+
+```bash
+pr cloudflare sync
+```
+
+Ele relê as portas atuais, reescreve os configs e reinicia os conectores que mudaram.
+
 ## Referência de comandos
 
 A referência completa também está embutida no próprio programa:
@@ -317,6 +413,8 @@ pr help        # ou: pr --help, pr -h, pr (sem argumentos)
 | `pr register` | `domains` (só lista) | liga um domínio a um projeto |
 | `pr unregister <dominio>` | `unlink` | desliga o domínio, apaga o certificado |
 | `pr proxy status\|start\|stop\|logs` | | controla o proxy reverso |
+| `pr cloudflare` | `cf` | publica por túnel da Cloudflare |
+| `pr cloudflare list\|sync\|login\|logout` | | túneis e credencial da Cloudflare |
 | `pr help` | `--help`, `-h` | esta referência |
 | `pr --version` | | versão instalada |
 
@@ -328,6 +426,7 @@ pr help        # ou: pr --help, pr -h, pr (sem argumentos)
 | `PR_HTTP_PORT` | `80` | porta HTTP do proxy |
 | `PR_HTTPS_PORT` | `443` | porta HTTPS do proxy |
 | `PR_ACME_DIRECTORY` | produção do Let's Encrypt | outro servidor ACME — use o [staging](https://letsencrypt.org/docs/staging-environment/) para testar sem gastar a cota de emissão |
+| `PR_CF_API` | `https://api.cloudflare.com/client/v4` | endereço da API da Cloudflare (serve para testar contra um mock) |
 | `NO_COLOR` | — | desativa as cores no terminal |
 
 ## Onde tudo fica guardado, e o formato
@@ -423,6 +522,9 @@ O proxy usa o arquivo assim que ele existir, sem precisar reiniciar.
 | `src/prompt.js` | ~121 | seleção com setas, leitura de texto no terminal |
 | `src/ui.js` | ~144 | cores, tabelas, caixas |
 | `src/pages.js` | ~147 | páginas HTML de erro (404/502) do proxy |
+| `src/cftunnel.js` | ~370 | o fluxo do `pr cloudflare` |
+| `src/cloudflare.js` | ~230 | cliente da API da Cloudflare e arquivos do túnel |
+| `src/cloudflared.js` | ~100 | acha ou baixa o binário do cloudflared |
 | `assets/logo.png` | — | logo usada nas páginas de erro |
 | `test/pr.test.js` | — | testes (`node --test`) |
 
@@ -458,6 +560,7 @@ Ao adicionar algo nesta área, o padrão do projeto é: nenhuma dependência nov
 - **Mudar como uma porta é descoberta**: `src/proc.js#ports()` e `#portFromLog()`.
 - **Mudar o comportamento de restart/backoff**: `src/supervisor.js`, constantes `MAX_RESTARTS` e `MIN_UPTIME_MS`.
 - **Mudar o roteamento do proxy** (ex.: balanceamento entre várias portas do mesmo projeto): `src/proxy.js#bindingFor()` e `#targetPort()`.
+- **Mexer no fluxo da Cloudflare**: `src/cftunnel.js` é o passo a passo interativo; `src/cloudflare.js` tem o cliente da API (todas as chamadas passam por `call()`) e a escrita do `config.yml`; `src/cloudflared.js` cuida do binário.
 - **Trocar de certificado (outra CA)**: como o cliente ACME é padrão (RFC 8555), basta apontar `PR_ACME_DIRECTORY` para outro provedor compatível — não deveria precisar mexer em `src/acme.js`.
 - **Mudar a aparência do terminal**: tudo centralizado em `src/ui.js` (cores) e `src/prompt.js` (interação).
 - **Mudar as páginas de erro do proxy**: `src/pages.js`, ou pelo usuário final, via `~/.pr/pages/404.html` / `502.html`, sem mexer em código.
@@ -494,4 +597,6 @@ Veja a seção **Problemas comuns** do [README.md](README.md#problemas-comuns) p
 - **Não sobrevive a reboot.** Nem os processos gerenciados nem o proxy voltam sozinhos depois de reiniciar o servidor — é preciso rodar `pr proxy start` e subir os projetos de novo manualmente. Não há hoje um `pr startup` que gere uma unit systemd (é o próximo passo natural, se for necessário).
 - **Só Linux.** A descoberta de porta depende de `/proc` e do comando `ss` (com `lsof` como alternativa).
 - **Uma porta por processo é assumida no proxy** — não há balanceamento entre múltiplas instâncias do mesmo projeto.
-- **DNS é responsabilidade do usuário.** O `pr` não gerencia registros DNS pelo provedor (Hostinger/Registro.br/etc) via API — apenas mostra o que colar e confere se já resolve.
+- **DNS é responsabilidade do usuário** no caminho do `pr register`: o `pr` não mexe na zona pelo provedor (Hostinger/Registro.br/etc), apenas mostra o que colar e confere se já resolve. No caminho da Cloudflare o registro é criado automaticamente, porque ali existe API.
+- **O túnel aponta para uma porta fixa.** Se o projeto reiniciar noutra porta, é preciso `pr cloudflare sync`.
+- **O caminho da Cloudflare exige o domínio na Cloudflare** (nameservers dela), e o conector depende do binário `cloudflared`.

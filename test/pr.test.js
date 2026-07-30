@@ -126,3 +126,65 @@ test('update não regrava quando nada muda', async (t) => {
   assert.equal(result.gravouMudanca, true, 'mudança real deve gravar');
   assert.equal(result.regravouIgual, false, 'valor igual não deve regravar');
 });
+
+test('validarHostname aceita a zona e seus subdomínios', async () => {
+  const { validarHostname } = await import('../src/cftunnel.js');
+
+  assert.equal(validarHostname('efflar.com', 'efflar.com').hostname, 'efflar.com');
+  assert.equal(validarHostname('efflar.com', 'app.efflar.com').hostname, 'app.efflar.com');
+  assert.equal(validarHostname('efflar.com', ' HTTPS://App.Efflar.com/painel ').hostname, 'app.efflar.com');
+  assert.equal(validarHostname('efflar.com', 'efflar.com.').hostname, 'efflar.com');
+
+  assert.match(validarHostname('efflar.com', 'outro.com').erro, /não pertence/);
+  // sufixo parecido não é subdomínio: naoefflar.com não pertence a efflar.com
+  assert.match(validarHostname('efflar.com', 'naoefflar.com').erro, /não pertence/);
+  assert.match(validarHostname('efflar.com', '').erro, /vazio/);
+});
+
+test('o config do túnel lista todas as rotas e termina com o 404', async (t) => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-cf-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+
+  const out = execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
+      const cf = await import('${path.resolve('src/cloudflare.js')}');
+      const fs = await import('node:fs');
+      cf.writeTunnelCredentials({ accountId: 'acct', tunnelId: 'tun-1', tunnelName: 'pr-app', secret: 'c2VncmVkbw==' });
+      const conf = cf.writeTunnelConfig('tun-1', [
+        { hostname: 'efflar.com', port: 3000 },
+        { hostname: 'api.efflar.com', port: 4000 },
+      ]);
+      const cred = cf.tunnelPaths('tun-1').credentials;
+      console.log(JSON.stringify({
+        config: fs.readFileSync(conf, 'utf8'),
+        modo: (fs.statSync(cred).mode & 0o777).toString(8),
+        cred: JSON.parse(fs.readFileSync(cred, 'utf8')),
+      }));
+      `,
+    ],
+    { env: { ...process.env, PR_HOME: home }, encoding: 'utf8' }
+  );
+
+  const { config, modo, cred } = JSON.parse(out.trim().split('\n').pop());
+
+  assert.match(config, /^tunnel: tun-1$/m);
+  assert.match(config, /^\s+- hostname: efflar\.com$/m);
+  assert.match(config, /^\s+service: http:\/\/localhost:3000$/m);
+  assert.match(config, /^\s+- hostname: api\.efflar\.com$/m);
+  assert.match(config, /^\s+service: http:\/\/localhost:4000$/m);
+  // a regra final precisa ser a última: é o catch-all do cloudflared
+  assert.match(config.trimEnd().split('\n').pop(), /- service: http_status:404/);
+
+  assert.equal(modo, '600', 'a credencial do túnel não pode ficar legível para outros');
+  assert.equal(cred.TunnelID, 'tun-1');
+  assert.equal(cred.AccountTag, 'acct');
+});

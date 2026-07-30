@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as domainsCli from './register.js';
+import { cmdCloudflare } from './cftunnel.js';
 import { startAndReport, shortenPath } from './start.js';
 import { select, ask, isInteractive } from './prompt.js';
 import { c, box, width, info, fail } from './ui.js';
@@ -86,8 +87,8 @@ export async function cmdMenu() {
         value: 'run',
       },
       {
-        label: c.faint('conectar via Cloudflare'),
-        hint: 'em breve',
+        label: 'conectar via Cloudflare',
+        hint: 'publica por túnel, sem precisar de IP público',
         value: 'cloudflare',
       },
       { label: c.faint('sair'), hint: '', value: null },
@@ -97,7 +98,7 @@ export async function cmdMenu() {
 
   if (choice === 'register') return domainsCli.cmdRegister();
   if (choice === 'run') return runProject();
-  if (choice === 'cloudflare') return cloudflareSoon();
+  if (choice === 'cloudflare') return cmdCloudflare();
 
   console.log();
   console.log(`  ${c.faint('até mais. Todos os comandos: pr help')}`);
@@ -138,15 +139,6 @@ async function runProject() {
     console.log(`  ${c.faint('para publicar num domínio: pr register')}`);
     console.log();
   }
-}
-
-function cloudflareSoon() {
-  console.log();
-  info('conectar via Cloudflare ainda não está pronto');
-  console.log(
-    `  ${c.faint('por enquanto, use')} ${c.accent('pr register')} ${c.faint('— registro A + certificado do Let\'s Encrypt')}`
-  );
-  console.log();
 }
 
 function canceled() {
