@@ -41,10 +41,36 @@ pr start "npm run build && npm start"    # entre aspas quando tiver && | >
 ```bash
 git clone https://github.com/Samuel-Jordesson/pr-register.git
 cd pr-register
-npm install -g .     # ou `npm link` para desenvolver
+sudo npm install -g . --prefix /usr/local
 ```
 
 Precisa de Node 20+ e roda em Linux (a descoberta de portas usa `/proc` e `ss`). Sem dependências.
+
+### Atenção: já existe um `pr` no sistema
+
+O `pr` do GNU coreutils (`/usr/bin/pr`, um paginador de texto que quase ninguém usa) ocupa o nome. Se o seu npm estiver configurado com prefixo `/usr` — o caso do Node instalado pelo `apt` no Ubuntu — a instalação falha assim:
+
+```
+npm error EEXIST: file already exists
+npm error File exists: /usr/bin/pr
+```
+
+Instalar com `--prefix /usr/local` resolve: `/usr/local/bin` vem antes de `/usr/bin` no PATH, então o `pr` deste projeto passa a atender e o do coreutils continua intacto em `/usr/bin/pr`. **Nunca use `npm install -g . --force`** aqui: ele sobrescreve um arquivo do coreutils gerenciado pelo `dpkg`.
+
+Confira qual está valendo:
+
+```bash
+which pr        # esperado: /usr/local/bin/pr
+pr --version    # esperado: pr 0.1.0
+```
+
+Se preferir não substituir o comando do sistema, instale com outro nome:
+
+```bash
+sudo ln -sf /usr/local/lib/node_modules/pr-register/bin/pr.js /usr/local/bin/prj
+```
+
+Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma ressalva do prefixo.
 
 ## Comandos
 
