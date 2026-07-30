@@ -71,6 +71,11 @@ git clone https://github.com/Samuel-Jordesson/pr-register.git
 cd pr-register
 sudo npm install -g . --prefix /usr/local     # ou: sh install.sh
 ```
+### Pode usar tambem assim
+```bash
+curl -fsSL https://raw.githubusercontent.com/Samuel-Jordesson/pr-register/main/install.sh | sh
+pr proxy stop && pr proxy start
+```
 
 ### Atenção: já existe um `pr` no sistema
 
