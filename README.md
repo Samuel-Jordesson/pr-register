@@ -77,6 +77,7 @@ sudo npm install -g . --prefix /usr/local     # ou: sh install.sh
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Samuel-Jordesson/pr-register/main/install.sh | sh
 pr proxy stop && pr proxy start
+
 ```
 
 ### Atenção: já existe um `pr` no sistema
