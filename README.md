@@ -2,6 +2,8 @@
 
 Rode qualquer projeto em segundo plano com um comando, veja em que porta ele subiu e publique num domínio seu com HTTPS. Um `pm2` enxuto com um pedaço de `nginx` embutido — em Node puro, sem dependências.
 
+Documentação completa (uso, instalação, arquitetura interna e como mexer no código): [DOCUMENTACAO.md](DOCUMENTACAO.md).
+
 ```
 $ cd meu-projeto
 $ pr npm run dev
