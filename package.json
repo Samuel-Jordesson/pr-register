@@ -1,0 +1,39 @@
+{
+  "name": "pr-register",
+  "version": "0.1.0",
+  "description": "Rode projetos em segundo plano e publique num domínio com HTTPS automático",
+  "type": "module",
+  "bin": {
+    "pr": "bin/pr.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Samuel-Jordesson/pr-register.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Samuel-Jordesson/pr-register/issues"
+  },
+  "homepage": "https://github.com/Samuel-Jordesson/pr-register#readme",
+  "keywords": [
+    "pm2",
+    "nginx",
+    "proxy",
+    "process-manager",
+    "letsencrypt",
+    "acme",
+    "cli",
+    "dominio"
+  ]
+}
