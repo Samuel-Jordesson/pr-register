@@ -188,3 +188,54 @@ test('o config do túnel lista todas as rotas e termina com o 404', async (t) =>
   assert.equal(cred.TunnelID, 'tun-1');
   assert.equal(cred.AccountTag, 'acct');
 });
+
+test('os vínculos ganham id curto e podem ser achados por id, endereço ou projeto', async (t) => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-cf-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+
+  const out = execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
+      const cf = await import('${path.resolve('src/cloudflare.js')}');
+      const base = { process: 'loja', zoneId: 'z', zoneName: 'efflar.com', tunnelId: 't', tunnelName: 'pr-loja', port: 3000, createdAt: 1 };
+      cf.saveLink({ ...base, hostname: 'efflar.com' });
+      cf.saveLink({ ...base, hostname: 'app.efflar.com' });
+      cf.saveLink({ ...base, hostname: 'api.efflar.com', process: 'api' });
+
+      const ids = cf.links().map((l) => l.id);
+      const porId = cf.resolveLink('1')?.hostname;
+      const porHost = cf.resolveLink('efflar.com')?.id;
+      const porProjeto = cf.resolveLink('api')?.hostname;
+
+      // regravar o mesmo endereço mantém o id, e o id liberado é reaproveitado
+      cf.saveLink({ ...base, hostname: 'app.efflar.com', port: 9999 });
+      const idEstavel = cf.resolveLink('app.efflar.com')?.id;
+      const portaNova = cf.resolveLink('app.efflar.com')?.port;
+
+      cf.removeLink('efflar.com');
+      cf.saveLink({ ...base, hostname: 'novo.efflar.com' });
+      const reaproveitado = cf.resolveLink('novo.efflar.com')?.id;
+
+      console.log(JSON.stringify({ ids, porId, porHost, porProjeto, idEstavel, portaNova, reaproveitado }));
+      `,
+    ],
+    { env: { ...process.env, PR_HOME: home }, encoding: 'utf8' }
+  );
+
+  const r = JSON.parse(out.trim().split('\n').pop());
+  assert.deepEqual(r.ids, [0, 1, 2], 'ids devem começar em 0 e ser sequenciais');
+  assert.equal(r.porId, 'app.efflar.com');
+  assert.equal(r.porHost, 0);
+  assert.equal(r.porProjeto, 'api.efflar.com');
+  assert.equal(r.idEstavel, 1, 'regravar o mesmo endereço não pode trocar o id');
+  assert.equal(r.portaNova, 9999);
+  assert.equal(r.reaproveitado, 0, 'o id liberado volta a ser usado');
+});

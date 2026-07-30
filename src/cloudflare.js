@@ -153,11 +153,36 @@ export async function pointToTunnel(creds, zoneId, hostname, tunnelId) {
   return call(creds, `/zones/${zoneId}/dns_records`, { method: 'POST', body: registro });
 }
 
+/** Apaga o registro que aponta o hostname para o túnel. */
+export async function unpointFromTunnel(creds, zoneId, hostname, recordId) {
+  let alvo = recordId;
+
+  if (!alvo) {
+    const encontrados = await call(
+      creds,
+      `/zones/${zoneId}/dns_records?name=${encodeURIComponent(hostname)}&type=CNAME`
+    );
+    const doTunel = encontrados.find((r) => String(r.content).endsWith('.cfargotunnel.com'));
+    if (!doTunel) return false; // já não existe: nada a fazer
+    alvo = doTunel.id;
+  }
+
+  await call(creds, `/zones/${zoneId}/dns_records/${alvo}`, { method: 'DELETE' });
+  return true;
+}
+
+/** Apaga os arquivos locais de um túnel que não serve mais ninguém. */
+export function removeTunnelFiles(tunnelId) {
+  const { credentials, config } = tunnelPaths(tunnelId);
+  fs.rmSync(credentials, { force: true });
+  fs.rmSync(config, { force: true });
+}
+
 // ── registro local dos túneis ────────────────────────────────────────────
 
 const tunnelsFile = () => path.join(CF_DIR(), 'tunnels.json');
 
-/** @typedef {{process:string, hostname:string, zoneId:string, zoneName:string, tunnelId:string, tunnelName:string, port:number, createdAt:number}} Vinculo */
+/** @typedef {{id:number, process:string, hostname:string, zoneId:string, zoneName:string, tunnelId:string, tunnelName:string, recordId?:string, port:number, createdAt:number}} Vinculo */
 
 /** @returns {Vinculo[]} */
 export function links() {
@@ -170,10 +195,38 @@ export function links() {
 
 export function saveLink(link) {
   fs.mkdirSync(CF_DIR(), { recursive: true });
+  const anterior = links().find((l) => l.hostname === link.hostname);
   const resto = links().filter((l) => l.hostname !== link.hostname);
-  const todos = [...resto, link];
+
+  // o id é curto e estável, para servir de alvo em `pr cloudflare kill 0`
+  const completo = { ...link, id: link.id ?? anterior?.id ?? nextLinkId(resto) };
+  const todos = [...resto, completo].sort((a, b) => a.id - b.id);
+
   fs.writeFileSync(tunnelsFile(), JSON.stringify(todos, null, 2));
-  return link;
+  return completo;
+}
+
+function nextLinkId(existentes = links()) {
+  const usados = new Set(existentes.map((l) => l.id));
+  let id = 0;
+  while (usados.has(id)) id++;
+  return id;
+}
+
+/**
+ * Acha um vínculo por id, hostname ou nome do projeto.
+ * @returns {Vinculo|null}
+ */
+export function resolveLink(alvo) {
+  const todos = links();
+  const texto = String(alvo).toLowerCase();
+
+  return (
+    todos.find((l) => String(l.id) === texto) ||
+    todos.find((l) => l.hostname === texto) ||
+    todos.find((l) => l.process.toLowerCase() === texto) ||
+    null
+  );
 }
 
 export function removeLink(hostname) {

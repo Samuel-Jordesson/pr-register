@@ -349,10 +349,22 @@ O "resto" é: baixar o `cloudflared` se faltar, criar o túnel na sua conta, gra
 | Comando | O que faz |
 | --- | --- |
 | `pr cloudflare` | o fluxo acima (apelido: `pr cf`) |
-| `pr cloudflare list` | endereços publicados e o estado de cada conector |
+| `pr cloudflare list` | id, endereço, projeto, porta e estado de cada conector |
+| `pr cloudflare kill <id>` | desvincula o domínio do projeto (apelidos: `rm`, `delete`, `unlink`) |
 | `pr cloudflare sync` | reescreve os túneis com as portas atuais e reinicia os conectores |
 | `pr cloudflare login` | troca a credencial |
 | `pr cloudflare logout` | apaga a credencial guardada |
+
+```
+╭─ cloudflare ──────────────────────────────────────────────╮
+│ ID  ENDEREÇO          PROJETO  PORTA  SITUAÇÃO             │
+├────────────────────────────────────────────────────────────┤
+│  0  ● efflar.com      loja      5077  conectado            │
+│  1  ● app.efflar.com  loja      5077  conectado            │
+├────────────────────────────────────────────────────────────┤
+│ conta Minha Conta  ·  desvincular: pr cloudflare kill <id> │
+╰────────────────────────────────────────────────────────────╯
+```
 
 Na listagem, a bolinha diz o estado **real**, lido do log do conector:
 
@@ -361,6 +373,25 @@ Na listagem, a bolinha diz o estado **real**, lido do log do conector:
 | 🟢 verde | conexão registrada na borda da Cloudflare — está servindo |
 | 🟡 amarelo | o conector subiu mas ainda não registrou (credencial recusada e rede bloqueada são as causas comuns) |
 | 🔴 vermelho | o conector está parado, ou o projeto caiu |
+
+### Desvinculando
+
+```bash
+pr cloudflare kill 1               # pelo id da lista
+pr cloudflare kill app.efflar.com  # ou pelo endereço
+pr cloudflare kill loja            # ou pelo nome do projeto
+```
+
+O que acontece, nessa ordem:
+
+1. **o registro DNS é apagado na Cloudflare** — é isso que efetivamente tira o domínio do ar;
+2. a rota some do `config.yml` do túnel;
+3. se o túnel ainda serve outros endereços, o conector é reiniciado sem aquela rota;
+4. se aquele era o último endereço, o conector é parado e removido, o túnel é apagado da sua conta e os arquivos locais dele somem.
+
+O projeto em si continua rodando — sai só a ligação com o domínio. Para publicá-lo de novo, no mesmo domínio ou noutro, basta rodar `pr cloudflare`.
+
+Sem credencial guardada, o `pr` avisa que o registro DNS ficou na Cloudflare e desfaz só o lado local.
 
 ### Como fica montado
 

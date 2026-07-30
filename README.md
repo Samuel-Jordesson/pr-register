@@ -159,7 +159,9 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 | `pr proxy start\|stop\|status` | o proxy que atende as portas 80 e 443 |
 | `pr proxy logs [-f]` | o que o proxy e o Let's Encrypt andam fazendo |
 | `pr cloudflare` | publica por túnel da Cloudflare, sem IP público (apelido: `pr cf`) |
-| `pr cloudflare list\|sync` | túneis criados; `sync` reajusta as portas |
+| `pr cloudflare list` | túneis criados, com id, projeto e porta |
+| `pr cloudflare kill <id>` | desvincula o domínio do projeto |
+| `pr cloudflare sync` | reajusta os túneis às portas atuais |
 | `pr cloudflare login\|logout` | credencial da conta Cloudflare |
 
 O alvo pode ser o nome, o id numérico ou um prefixo único: `pr stop 0`, `pr logs meu`.

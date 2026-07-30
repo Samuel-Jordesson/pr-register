@@ -15,6 +15,8 @@ import { c, box, tableLines, RULE, symbols, ok, info, warn, fail, truncate } fro
 export async function cmdCloudflare(args = []) {
   const acao = args[0];
 
+  if (acao === 'kill' || acao === 'rm' || acao === 'delete' || acao === 'unlink')
+    return desvincular(args.slice(1));
   if (acao === 'logout') return logout();
   if (acao === 'list' || acao === 'status') return listar();
   if (acao === 'sync') return sincronizar();
@@ -296,9 +298,10 @@ async function publicar({ creds, projeto, porta, zona, hostname }) {
     passo(`configuração escrita em ${config.replace(process.env.HOME || '', '~')}`);
 
     passo(`apontando ${hostname} para o túnel`);
-    await cf.pointToTunnel(creds, zona.id, hostname, tunelId);
+    const registro = await cf.pointToTunnel(creds, zona.id, hostname, tunelId);
 
     cf.saveLink({
+      recordId: registro?.id,
       process: projeto.name,
       hostname,
       zoneId: zona.id,
@@ -394,6 +397,80 @@ async function esperarConector(nomeProcesso, { timeoutMs = 25000 } = {}) {
   return estadoConector(nomeProcesso);
 }
 
+
+/**
+ * Desfaz o vínculo entre um domínio e um projeto: tira o registro DNS,
+ * a rota do túnel e, se ninguém mais usava aquele túnel, apaga o túnel
+ * e para o conector.
+ */
+async function desvincular(args) {
+  if (!args.length) {
+    fail('informe o id, o endereço ou o projeto. Ex.: pr cloudflare kill 0');
+    console.log(`  ${c.faint('veja os ids com: pr cloudflare list')}`);
+    console.log();
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log();
+  for (const alvo of args) {
+    const link = cf.resolveLink(alvo);
+    if (!link) {
+      fail(`"${alvo}" não está na lista (pr cloudflare list)`);
+      process.exitCode = 1;
+      continue;
+    }
+
+    const passo = (msg) => console.log(`  ${c.accent(symbols.arrow)} ${c.dim(msg)}`);
+    const creds = cf.credentials();
+
+    // o DNS é o que realmente tira o domínio do ar; sem credencial, avisa
+    if (creds) {
+      try {
+        const apagou = await cf.unpointFromTunnel(creds, link.zoneId, link.hostname, link.recordId);
+        passo(apagou ? `registro de ${link.hostname} removido da Cloudflare` : `${link.hostname} já não tinha registro`);
+      } catch (err) {
+        warn(`não consegui apagar o registro DNS: ${err.message}`);
+        console.log(`  ${c.faint('apague na Cloudflare para o domínio parar de responder')}`);
+      }
+    } else {
+      warn('sem credencial guardada — o registro DNS continua na Cloudflare');
+    }
+
+    const irmaos = cf.links().filter((l) => l.tunnelId === link.tunnelId && l.hostname !== link.hostname);
+    const nomeProcesso = cf.tunnelProcessName(link.process);
+    const conector = store.read(nomeProcesso);
+
+    if (irmaos.length) {
+      // o túnel ainda serve outros endereços: só some a rota
+      cf.writeTunnelConfig(link.tunnelId, irmaos.map((l) => ({ hostname: l.hostname, port: l.port })));
+      if (conector) {
+        await runner.restart(conector);
+        passo(`conector reiniciado sem ${link.hostname}`);
+      }
+    } else {
+      if (conector) {
+        await runner.stop(conector);
+        store.remove(nomeProcesso);
+        passo(`conector ${nomeProcesso} parado`);
+      }
+      if (creds?.accountId) {
+        try {
+          await cf.deleteTunnel(creds, creds.accountId, link.tunnelId);
+          passo(`túnel ${link.tunnelName} apagado`);
+        } catch (err) {
+          warn(`o túnel ${link.tunnelName} ficou na Cloudflare: ${err.message}`);
+        }
+      }
+      cf.removeTunnelFiles(link.tunnelId);
+    }
+
+    cf.removeLink(link.hostname);
+    ok(`${c.text(link.hostname)} ${c.faint('desvinculado de')} ${c.text(link.process)}`);
+  }
+  console.log();
+}
+
 // ── listagem e manutenção ────────────────────────────────────────────────
 
 function listar() {
@@ -433,6 +510,7 @@ function listar() {
     }
 
     return {
+      id: c.faint(String(l.id ?? '—')),
       host: `${bolinha} ${c.text(truncate(l.hostname, 30))}`,
       projeto: c.dim(l.process),
       porta: c.accent(String(l.port)),
@@ -442,6 +520,7 @@ function listar() {
 
   const [cabecalho, ...corpo] = tableLines(
     [
+      { key: 'id', label: 'id', align: 'right' },
       { key: 'host', label: 'endereço' },
       { key: 'projeto', label: 'projeto' },
       { key: 'porta', label: 'porta', align: 'right' },
@@ -453,7 +532,7 @@ function listar() {
 
   const creds = cf.credentials();
   const rodape = creds
-    ? c.faint(`conta ${creds.accountName || creds.accountId || '—'}`)
+    ? c.faint(`conta ${creds.accountName || creds.accountId || '—'}  ·  desvincular: pr cloudflare kill <id>`)
     : c.yellow('sem credencial — pr cloudflare login');
 
   console.log(box([cabecalho, RULE, ...corpo, RULE, rodape], { title: 'cloudflare' }));
