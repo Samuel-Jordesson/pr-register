@@ -5,9 +5,64 @@ import path from 'node:path';
 import * as domainsCli from './register.js';
 import { startAndReport, shortenPath } from './start.js';
 import { select, ask, isInteractive } from './prompt.js';
-import { c, ok, info, fail } from './ui.js';
+import { c, box, width, info, fail } from './ui.js';
 
 const VERSION = '0.1.0';
+
+
+/** A marca do PR System em blocos, para o cabeçalho do menu. */
+const LOGO = [
+  '    ████████████████████████',
+  '   ███████████████████████████',
+  ' █████████████████████████████',
+  ' ▓████████              ███████',
+  ' ███████                ███████',
+  '███████                 ███████',
+  '██████                  ███████',
+  '██████▓                 ███████',
+  '███████████            ▓███████',
+  '██████████████▓      ██████████',
+  '██████████████     ████████████',
+  '████████████    ▓██████████████',
+  '█████████      ████████████████',
+  '██████▓              ██████████',
+  '██████                  ███████',
+  '██████                  ███████',
+  '██████                 ████████',
+  '██████                ████████',
+  '██████              █████████',
+  '████████████████████████████',
+  '██████████████████████████',
+  '████████████████████████',
+];
+
+const TAGLINE = [
+  'Rode qualquer projeto em segundo plano e publique',
+  'cada um no seu próprio domínio, com HTTPS automático.',
+];
+
+/**
+ * Cabeçalho do menu. A arte é alta: em terminal baixo ela seria cortada
+ * e roubaria a tela das opções, então some e fica só o texto.
+ */
+function header() {
+  const cabe = (process.stdout.rows || 24) >= 34;
+
+  const rodape = `${c.faint('versão')} ${c.dim(VERSION)}  ${c.faint('·')} ${c.faint('zero dependências')}  ${c.faint('·')} ${c.faint('pr help para todos os comandos')}`;
+  const texto = [...TAGLINE, width(rodape) ? rodape : ''];
+  const largura = Math.max(...texto.map(width), ...(cabe ? LOGO.map((l) => l.length) : [0]));
+  const centralizar = (linha) =>
+    ' '.repeat(Math.max(0, Math.floor((largura - linha.length) / 2))) + linha;
+
+  const linhas = [
+    ...(cabe ? [...LOGO.map((l) => c.accent(centralizar(l))), ''] : []),
+    ...TAGLINE.map((l) => c.text(l)),
+    '',
+    rodape,
+  ];
+
+  return box(linhas, { title: 'PR System' });
+}
 
 export function isMenuAvailable() {
   return isInteractive();
@@ -15,9 +70,8 @@ export function isMenuAvailable() {
 
 export async function cmdMenu() {
   console.log();
-  console.log(
-    `  ${c.bold(c.accent('PR System'))} ${c.faint(`v${VERSION}`)}`
-  );
+  console.log(header());
+  console.log();
 
   const choice = await select(
     [

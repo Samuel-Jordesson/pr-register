@@ -94,7 +94,23 @@ O lançador **fixa o caminho do Node usado na instalação**. Isso é proposital
 Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
 ```
-  PR System v0.1.0
+╭─ PR System ────────────────────────────────────────────────────────╮
+│                        ████████████████████████                     │
+│                      ███████████████████████████                    │
+│                    █████████████████████████████                    │
+│                    ▓████████              ███████                   │
+│                    ███████                ███████                   │
+│                          (a marca em blocos)                        │
+│                    ████████████████████████████                     │
+│                     ██████████████████████████                      │
+│                      ████████████████████████                       │
+│                                                                     │
+│ Rode qualquer projeto em segundo plano e publique                   │
+│ cada um no seu próprio domínio, com HTTPS automático.               │
+│                                                                     │
+│ versão 0.1.0  · zero dependências  · pr help para todos os comandos │
+╰─────────────────────────────────────────────────────────────────────╯
+
   o que você quer fazer?
 
   → registrar domínio         publica um projeto num domínio seu, com https
@@ -108,6 +124,8 @@ Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 - **registrar domínio** — o mesmo fluxo do `pr register`.
 - **rodar projeto** — pergunta a pasta do projeto (enter aceita a pasta atual; aceita `~`, caminho relativo ou absoluto) e o comando de inicialização. O comando vem sugerido: se houver `package.json`, o `pr` propõe `npm run dev`/`start`/`serve` conforme os scripts existentes; senão reconhece `manage.py`, `artisan`, `go.mod`, `Cargo.toml` ou `index.html` e sugere o comando típico de cada um. Enter aceita a sugestão.
 - **conectar via Cloudflare** — ainda não implementado; por ora avisa e aponta para o `pr register`.
+
+A marca em blocos ocupa 22 linhas: em terminal com menos de 34 linhas ela é omitida, para não empurrar as opções para fora da tela — o resto do cabeçalho continua igual.
 
 O menu só abre quando há terminal de verdade. Num pipe ou script (`pr | cat`, cron), `pr` sozinho cai na tela de ajuda, para não travar esperando uma tecla. `pr menu` força o menu.
 
@@ -388,7 +406,7 @@ O proxy usa o arquivo assim que ele existir, sem precisar reiniciar.
 | `install.sh` | ~185 | instalador de uma linha |
 | `bin/pr.js` | 8 | ponto de entrada do executável |
 | `src/cli.js` | ~370 | interpreta argumentos, chama os comandos, monta as telas |
-| `src/menu.js` | ~130 | a tela que aparece ao digitar `pr` sozinho |
+| `src/menu.js` | ~170 | a tela que aparece ao digitar `pr` sozinho (marca, opções) |
 | `src/start.js` | ~70 | sobe um projeto e reporta (usado pelo CLI e pelo menu) |
 | `src/runner.js` | ~150 | iniciar/parar/reiniciar/inspecionar processos |
 | `src/supervisor.js` | ~122 | processo destacado que mantém um comando vivo |

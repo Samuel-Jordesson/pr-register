@@ -9,7 +9,21 @@ Digite `pr` sozinho e escolha pelo menu:
 ```
 $ pr
 
-  PR System v0.1.0
+╭─ PR System ────────────────────────────────────────────────────────╮
+│                        ████████████████████████                     │
+│                      ███████████████████████████                    │
+│                    █████████████████████████████                    │
+│                    ▓████████              ███████                   │
+│                          (a marca em blocos)                        │
+│                     ██████████████████████████                      │
+│                      ████████████████████████                       │
+│                                                                     │
+│ Rode qualquer projeto em segundo plano e publique                   │
+│ cada um no seu próprio domínio, com HTTPS automático.               │
+│                                                                     │
+│ versão 0.1.0  · zero dependências  · pr help para todos os comandos │
+╰─────────────────────────────────────────────────────────────────────╯
+
   o que você quer fazer?
 
   → registrar domínio         publica um projeto num domínio seu, com https
