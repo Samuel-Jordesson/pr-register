@@ -277,7 +277,14 @@ O proxy achou o domínio mas não achou o projeto atrás dele. Veja `pr list`:
 
 ### `404 nenhum projeto registrado para este domínio`
 
-O `Host` que chegou não casa com nenhum domínio do `pr register`. Costuma ser acesso pelo IP puro (sem domínio) ou um subdomínio de um domínio que você não registrou.
+O `Host` que chegou não casa com nenhum domínio do `pr register`. Costuma ser acesso pelo IP puro (sem domínio) ou um subdomínio de um domínio que você não registrou. No navegador aparece uma página escura com a logo; no `curl` continua sendo uma linha de texto.
+
+Para trocar essa página pela sua, crie o arquivo — o proxy usa na hora, sem reiniciar:
+
+```bash
+mkdir -p ~/.pr/pages
+nano ~/.pr/pages/404.html      # e ~/.pr/pages/502.html para "projeto fora do ar"
+```
 
 ### O projeto some depois de reiniciar o VPS
 
@@ -315,6 +322,7 @@ Cobrem a leitura de portas nos logs, a árvore de processos, o alinhamento da ta
 | `src/proxyd.js` · `src/proxyctl.js` | daemon do proxy e seu controle |
 | `src/acme.js` · `src/asn1.js` | cliente Let's Encrypt e o CSR |
 | `src/register.js` | fluxo do `pr register` |
+| `src/pages.js` · `assets/` | páginas 404/502 e a logo |
 | `src/domains.js` | vínculos domínio → projeto |
 | `src/prompt.js` | seleção com setas e entrada de texto |
 | `src/ui.js` | cores, tabelas e caixas |

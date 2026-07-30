@@ -10,6 +10,7 @@ import * as store from './store.js';
 import * as domains from './domains.js';
 import * as runner from './runner.js';
 import { AcmeClient } from './acme.js';
+import * as pages from './pages.js';
 import { publicIp, pointsHere } from './net.js';
 
 const HTTP_PORT = Number(process.env.PR_HTTP_PORT || 80);
@@ -57,18 +58,37 @@ export function createProxy({ log = console.log } = {}) {
     return port;
   }
 
-  function fail(res, code, message) {
-    const body = `${code} ${message}\n`;
-    res.writeHead(code, { 'content-type': 'text/plain; charset=utf-8', 'content-length': Buffer.byteLength(body) });
+  /**
+   * Resposta de erro: página para navegador, texto puro para curl e scripts.
+   * @param {import('node:http').IncomingMessage} [req]
+   */
+  function fail(res, code, message, { req, html } = {}) {
+    const useHtml = html && req && pages.wantsHtml(req);
+    const body = useHtml ? html : `${code} ${message}\n`;
+    res.writeHead(code, {
+      'content-type': useHtml ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8',
+      'content-length': Buffer.byteLength(body),
+    });
     res.end(body);
   }
 
   function proxyRequest(req, res) {
     const binding = bindingFor(req.headers.host);
-    if (!binding) return fail(res, 404, 'nenhum projeto registrado para este domínio');
+    if (!binding) {
+      const host = (req.headers.host || '').split(':')[0];
+      return fail(res, 404, 'nenhum projeto registrado para este domínio', {
+        req,
+        html: pages.notFound(host),
+      });
+    }
 
     const port = targetPort(binding.process);
-    if (!port) return fail(res, 502, `"${binding.process}" não está no ar`);
+    if (!port) {
+      return fail(res, 502, `"${binding.process}" não está no ar`, {
+        req,
+        html: pages.badGateway(binding.process),
+      });
+    }
 
     const proxied = http.request(
       {
@@ -90,7 +110,11 @@ export function createProxy({ log = console.log } = {}) {
     );
 
     proxied.on('error', (err) => {
-      if (!res.headersSent) fail(res, 502, `erro ao falar com ${binding.process}: ${err.code || err.message}`);
+      if (!res.headersSent)
+        fail(res, 502, `erro ao falar com ${binding.process}: ${err.code || err.message}`, {
+          req,
+          html: pages.badGateway(binding.process),
+        });
       else res.destroy();
     });
 

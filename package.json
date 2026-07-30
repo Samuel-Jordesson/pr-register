@@ -12,6 +12,8 @@
   "files": [
     "bin",
     "src",
+    "assets",
+    "install.sh",
     "README.md"
   ],
   "scripts": {

@@ -125,7 +125,7 @@ fi
 step "instalando em $LIB"
 $SUDO rm -rf "$LIB"
 $SUDO mkdir -p "$LIB"
-$SUDO cp -R "$TMP/src/bin" "$TMP/src/src" "$TMP/src/package.json" "$LIB/"
+$SUDO cp -R "$TMP/src/bin" "$TMP/src/src" "$TMP/src/assets" "$TMP/src/package.json" "$LIB/"
 [ -f "$TMP/src/README.md" ] && $SUDO cp "$TMP/src/README.md" "$LIB/"
 
 # O comando é um lançador que fixa o node usado na instalação: assim o `pr`
