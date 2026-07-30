@@ -38,10 +38,23 @@ export async function publicIp({ timeoutMs = 4000 } = {}) {
   return { ip: null, source: 'none' };
 }
 
-/** Endereços A de um domínio, consultando os servidores autoritativos atuais. */
+/**
+ * Endereços A de um domínio. Consulta o resolvedor do sistema e, se ele
+ * não trouxer nada, tenta resolvedores públicos — o cache negativo local
+ * costuma insistir no "não existe" bem depois do registro já estar no ar.
+ */
 export async function resolveA(domain) {
   try {
-    return await dns.resolve4(domain);
+    const records = await dns.resolve4(domain);
+    if (records.length) return records;
+  } catch {
+    // segue para os resolvedores públicos
+  }
+
+  try {
+    const resolver = new dns.Resolver({ timeout: 3000, tries: 2 });
+    resolver.setServers(['1.1.1.1', '8.8.8.8']);
+    return await resolver.resolve4(domain);
   } catch {
     return [];
   }
@@ -49,11 +62,17 @@ export async function resolveA(domain) {
 
 /**
  * O domínio já aponta para este servidor?
- * @returns {Promise<{pointing:boolean, records:string[]}>}
+ * `extras` são outros registros A do mesmo nome: eles fazem o Let's Encrypt
+ * sortear qual IP validar, então quebram a emissão de forma intermitente.
+ * @returns {Promise<{pointing:boolean, records:string[], extras:string[]}>}
  */
 export async function pointsHere(domain, ip) {
   const records = await resolveA(domain);
-  return { pointing: Boolean(ip) && records.includes(ip), records };
+  return {
+    pointing: Boolean(ip) && records.includes(ip),
+    records,
+    extras: ip ? records.filter((r) => r !== ip) : records,
+  };
 }
 
 /** Alguém já escuta nesta porta local? */

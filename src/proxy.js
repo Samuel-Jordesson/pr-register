@@ -186,7 +186,11 @@ export function createProxy({ log = console.log } = {}) {
     const info = domains.certInfo(domain);
     if (info.ok && info.expiresAt - Date.now() > RENEW_BEFORE_MS) return;
 
-    const { pointing, records } = await pointsHere(domain, serverIp);
+    const { pointing, records, extras } = await pointsHere(domain, serverIp);
+    if (pointing && extras.length) {
+      // o desafio pode cair no outro IP e falhar sem motivo aparente
+      log(`${domain} tem registro A extra (${extras.join(', ')}) — apague no registrador`);
+    }
     if (!pointing) {
       const detail = records.length
         ? `DNS aponta para ${records.join(', ')}, esperado ${serverIp}`

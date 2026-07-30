@@ -214,7 +214,19 @@ PR_HTTP_PORT=8080 PR_HTTPS_PORT=8443 pr proxy start
 Rode `pr register` para ver o motivo em texto, e `pr proxy logs` para o detalhe. Por ordem de probabilidade:
 
 - **`DNS ainda não resolve` / `DNS aponta para outro IP`** — o registro A não foi salvo, ainda está propagando, ou aponta para outro lugar. Confira com `dig +short seudominio.com.br` e compare com o IP que o `pr proxy status` mostra. Propagação leva de minutos a algumas horas; enquanto isso o `pr` não tenta emitir nada, justamente para não gastar as tentativas do Let's Encrypt.
+- **Mais de um registro A no mesmo nome** — o caso mais traiçoeiro: o site abre normalmente, mas o certificado nunca sai. Se o domínio resolve para dois IPs (o do VPS e o que já vinha da Hostinger, por exemplo), o Let's Encrypt sorteia um deles para validar o desafio e metade das tentativas cai no servidor errado. A lista do `pr register` avisa: `apague o registro A extra: 2.57.91.91`. Deixe **um só** registro A, com o IP do VPS.
+
+```bash
+dig +short seudominio.com.br @1.1.1.1   # deve responder um único IP
+```
+
 - **Se a Hostinger estiver com o proxy/CDN dela ligado**, o DNS vai resolver para o IP *dela*, não o seu, e a validação falha. Desligue o proxy do domínio ou aponte o A direto para o VPS.
+
+- **Cache negativo do resolvedor do VPS** — se você criou o registro A depois de já ter consultado o domínio, o `systemd-resolved` pode insistir no "não existe" por um tempo. O `pr` contorna isso consultando `1.1.1.1` quando o resolvedor local não traz nada, mas dá para limpar na mão:
+
+```bash
+sudo resolvectl flush-caches
+```
 - **Porta 80 fechada** — o desafio HTTP-01 é uma requisição da internet para `http://seudominio/.well-known/acme-challenge/...`. Precisa estar aberta no firewall do sistema **e** no painel do provedor (security group / firewall do VPS), que são coisas separadas:
 
 ```bash

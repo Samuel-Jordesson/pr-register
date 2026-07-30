@@ -17,7 +17,7 @@ async function inspectBinding(binding, serverIp) {
   const live = proc ? runner.inspect(proc) : null;
   const port = live?.ports[0] ?? null;
   const cert = domains.certInfo(binding.domain);
-  const { pointing, records } = await pointsHere(binding.domain, serverIp);
+  const { pointing, records, extras } = await pointsHere(binding.domain, serverIp);
 
   let dot = c.red(symbols.bullet);
   let label = 'esperando o DNS';
@@ -27,6 +27,10 @@ async function inspectBinding(binding, serverIp) {
     label = `${binding.process} não está no ar`;
   } else if (!pointing) {
     label = records.length ? `DNS aponta para ${records[0]}` : 'DNS ainda não resolve';
+  } else if (extras.length) {
+    // dois A no mesmo nome: o Let's Encrypt sorteia qual IP validar
+    dot = c.yellow(symbols.bullet);
+    label = `apague o registro A extra: ${extras.join(', ')}`;
   } else if (!cert.ok) {
     dot = c.yellow(symbols.bullet);
     label = binding.lastError ? truncate(binding.lastError, 34) : 'emitindo certificado';
@@ -35,7 +39,7 @@ async function inspectBinding(binding, serverIp) {
     label = 'conectado';
   }
 
-  return { binding, dot, label, port, pointing, cert };
+  return { binding, dot, label, port, pointing, extras, cert };
 }
 
 async function showBindings() {
@@ -56,7 +60,12 @@ async function showBindings() {
       domain: `${r.dot} ${c.text(r.binding.domain)}`,
       project: c.dim(r.binding.process),
       port: r.port ? c.accent(String(r.port)) : c.faint('—'),
-      state: r.cert.ok && r.pointing ? c.green(r.label) : c.faint(r.label),
+      state:
+        r.cert.ok && r.pointing && !r.extras.length
+          ? c.green(r.label)
+          : r.extras.length
+            ? c.yellow(r.label)
+            : c.faint(r.label),
     })),
     { indent: '' }
   );
