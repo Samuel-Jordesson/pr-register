@@ -1,4 +1,4 @@
-# pr
+# PR System
 
 Rode qualquer projeto em segundo plano com um comando, veja em que porta ele subiu e publique num domínio seu com HTTPS. Um `pm2` enxuto com um pedaço de `nginx` embutido — em Node puro, sem dependências.
 
@@ -38,17 +38,43 @@ pr start "npm run build && npm start"    # entre aspas quando tiver && | >
 
 ## Instalação
 
+Uma linha, no servidor:
+
 ```bash
-git clone https://github.com/Samuel-Jordesson/pr-register.git
-cd pr-register
-sudo npm install -g . --prefix /usr/local
+curl -fsSL https://raw.githubusercontent.com/Samuel-Jordesson/pr-register/main/install.sh | sh
 ```
 
 Precisa de Node 20+ e roda em Linux (a descoberta de portas usa `/proc` e `ss`). Sem dependências.
 
+O instalador baixa o código para `/usr/local/lib/pr-register` e cria o comando em `/usr/local/bin/pr`. Rodar de novo **atualiza** para a versão mais recente. Opções, se precisar:
+
+```bash
+# instala o Node por você, via nvm, se estiver faltando
+curl -fsSL .../install.sh | PR_NODE=1 sh
+
+# já libera as portas 80 e 443 para o node (evita o passo do setcap depois)
+curl -fsSL .../install.sh | PR_SETCAP=1 sh
+
+# instala em outro lugar, sem sudo
+curl -fsSL .../install.sh | PR_PREFIX=$HOME/.local sh
+
+# instala uma tag ou branch específica
+curl -fsSL .../install.sh | PR_REF=v0.1.0 sh
+```
+
+Sem sudo e sem escrita em `/usr/local`, ele cai para `~/.local` sozinho e avisa se essa pasta não estiver no PATH.
+
+### Instalando a partir do clone
+
+```bash
+git clone https://github.com/Samuel-Jordesson/pr-register.git
+cd pr-register
+sudo npm install -g . --prefix /usr/local     # ou: sh install.sh
+```
+
 ### Atenção: já existe um `pr` no sistema
 
-O `pr` do GNU coreutils (`/usr/bin/pr`, um paginador de texto que quase ninguém usa) ocupa o nome. Se o seu npm estiver configurado com prefixo `/usr` — o caso do Node instalado pelo `apt` no Ubuntu — a instalação falha assim:
+O `pr` do GNU coreutils (`/usr/bin/pr`, um paginador de texto que quase ninguém usa) ocupa o nome. O instalador acima não sofre com isso — ele escreve em `/usr/local/bin`, que vem antes no PATH, e avisa se algum outro `pr` estiver na frente. Já a instalação via `npm install -g` falha se o seu npm usa o prefixo `/usr` — o caso do Node vindo do `apt` no Ubuntu:
 
 ```
 npm error EEXIST: file already exists
@@ -278,6 +304,7 @@ Cobrem a leitura de portas nos logs, a árvore de processos, o alinhamento da ta
 
 | Arquivo | Responsabilidade |
 | --- | --- |
+| `install.sh` | instalador de uma linha |
 | `bin/pr.js` | entrada do CLI |
 | `src/cli.js` | comandos e ajuda |
 | `src/runner.js` | iniciar, parar, reiniciar, inspecionar |
