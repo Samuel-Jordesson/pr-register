@@ -117,8 +117,8 @@ export function notFound(host) {
   return (
     override(404) ??
     page({
-      title: 'RP System',
-      message: 'O RP System coloca seus projetos no ar e publica cada um no seu próprio domínio, com HTTPS automático.',
+      title: 'PR System',
+      message: 'O PR System coloca seus projetos no ar e publica cada um no seu próprio domínio, com HTTPS automático.',
       detail:
         'Um comando sobe o projeto em segundo plano, descobre em que porta ele subiu e o mantém rodando mesmo depois que você fecha o terminal. ' +
         'Outro liga um domínio a esse projeto: o certificado é emitido e renovado sozinho, e vários domínios convivem no mesmo servidor.' +
