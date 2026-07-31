@@ -114,7 +114,8 @@ Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
   → registrar domínio         publica um projeto num domínio seu, com https
     rodar projeto             sobe um projeto em segundo plano
-    conectar via Cloudflare   em breve
+    criar subdomínio          aponta app.seudominio.com para outro projeto
+    conectar via Cloudflare   publica por túnel, sem precisar de IP público
     sair
 
   ↑ ↓ para navegar · enter para escolher · esc para sair
