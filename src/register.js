@@ -81,7 +81,7 @@ async function showBindings() {
 }
 
 /** Instruções de DNS para colar no registrador. */
-function dnsInstructions(domain, ip, { source } = {}) {
+export function dnsInstructions(domain, ip, { source } = {}) {
   const [headerLine, ...rowLines] = tableLines(
     [
       { key: 'type', label: 'tipo' },

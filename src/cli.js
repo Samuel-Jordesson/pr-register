@@ -6,6 +6,7 @@ import * as runner from './runner.js';
 import * as domainsCli from './register.js';
 import { cmdMenu, isMenuAvailable } from './menu.js';
 import { cmdCloudflare } from './cftunnel.js';
+import { cmdSub } from './sub.js';
 import { startAndReport, shortenPath } from './start.js';
 import { c, tableLines, box, RULE, symbols, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
 
@@ -15,7 +16,7 @@ const KNOWN = new Set([
   'start', 'list', 'ls', 'status', 'stop', 'kill', 'restart', 'logs', 'log',
   'info', 'show', 'delete', 'rm', 'del', 'help', 'clean',
   'register', 'domains', 'unregister', 'unlink', 'proxy', 'menu',
-  'cloudflare', 'cf',
+  'cloudflare', 'cf', 'sub', 'subdominio', 'subdomain',
 ]);
 
 export async function main(argv) {
@@ -65,6 +66,10 @@ export async function main(argv) {
     case 'cloudflare':
     case 'cf':
       return cmdCloudflare(rest);
+    case 'sub':
+    case 'subdominio':
+    case 'subdomain':
+      return cmdSub(rest);
     default:
       return help();
   }
@@ -350,6 +355,7 @@ function help() {
     section('DOMÍNIOS'),
     cmd('pr register', 'escolhe um projeto, pede o domínio e mostra o DNS'),
     cmd('pr domains', 'só a lista dos domínios e a situação de cada um'),
+    cmd('pr sub', 'cria um subdomínio de um domínio já publicado'),
     cmd('pr unregister <dominio>', 'desliga o domínio e apaga o certificado'),
     cmd('pr proxy status', 'o proxy está no ar? em que ip e portas?'),
     cmd('pr proxy start', 'sobe o proxy das portas 80 e 443'),

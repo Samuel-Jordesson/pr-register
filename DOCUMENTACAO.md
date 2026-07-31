@@ -10,6 +10,7 @@ Tudo sobre o projeto num lugar só: o que é, como instalar, como usar no dia a 
   - [O menu interativo](#o-menu-interativo)
 - [Domínio próprio e HTTPS](#domínio-próprio-e-https)
 - [Cloudflare Tunnel](#cloudflare-tunnel)
+- [Subdomínios](#subdomínios)
 - [Referência de comandos](#referência-de-comandos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Onde tudo fica guardado](#onde-tudo-fica-guardado-e-o-formato)
@@ -121,6 +122,7 @@ Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
 - **registrar domínio** — o mesmo fluxo do `pr register`.
 - **rodar projeto** — pergunta a pasta do projeto (enter aceita a pasta atual; aceita `~`, caminho relativo ou absoluto) e o comando de inicialização. O comando vem sugerido: se houver `package.json`, o `pr` propõe `npm run dev`/`start`/`serve` conforme os scripts existentes; senão reconhece `manage.py`, `artisan`, `go.mod`, `Cargo.toml` ou `index.html` e sugere o comando típico de cada um. Enter aceita a sugestão.
+- **criar subdomínio** — aponta `app.seudominio.com` para outro projeto. Veja [Subdomínios](#subdomínios).
 - **conectar via Cloudflare** — publica o projeto por um túnel da Cloudflare, sem precisar de IP público nem das portas 80/443. Veja [Cloudflare Tunnel](#cloudflare-tunnel).
 
 A marca tem 69 colunas: em terminal mais estreito que isso ela é omitida, porque cortada ao meio ficaria pior que ausente — o resto do cabeçalho continua igual.
@@ -418,6 +420,50 @@ pr cloudflare sync
 
 Ele relê as portas atuais, reescreve os configs e reinicia os conectores que mudaram.
 
+## Subdomínios
+
+Com um domínio já publicado, `pr sub` aponta `app.seudominio.com` para **outro projeto**, rodando em outra porta.
+
+```bash
+pr sub
+```
+
+```
+  de qual domínio quer criar um subdomínio?
+
+  → efflar.com   site · porta 6001  proxy
+    cancelar
+
+  ? subdomínio de efflar.com: blog
+
+  qual projeto vai responder em blog.efflar.com?
+
+    site       porta 6001
+  → blog       porta 6002
+    cancelar
+
+  ✔ blog.efflar.com → blog (porta 6002)
+```
+
+A lista de partida junta os dois caminhos de publicação — cada linha mostra o projeto, a porta e se veio do `pr register` (proxy) ou do `pr cloudflare` (túnel). O que acontece depois depende de qual for:
+
+- **domínio do proxy** — o vínculo entra em `domains.json` na hora, e o roteamento passa a valer imediatamente. Falta só o registro `A` do subdomínio na sua zona DNS, que o `pr` mostra na tela; quando ele propagar, o certificado sai sozinho.
+- **domínio de túnel** — não falta nada: o `CNAME` e a rota do túnel são criados na hora, pela API da Cloudflare, e o conector do projeto escolhido sobe automaticamente.
+
+O rótulo é só o começo do endereço: digite `app`, não `app.seudominio.com`. Letras, números e hífen no meio, até 63 caracteres.
+
+### Subdomínio não registrado
+
+Vale saber que, no caminho do proxy, um subdomínio que você **não** registrou já cai no projeto do domínio pai:
+
+```
+efflar.com        → site  (registrado)
+blog.efflar.com   → blog  (registrado com pr sub — o específico ganha)
+outro.efflar.com  → site  (não registrado, cai no pai)
+```
+
+Então `pr sub` serve exatamente para o caso em que você quer que um subdomínio **específico** vá para outro lugar.
+
 ## Referência de comandos
 
 A referência completa também está embutida no próprio programa:
@@ -439,6 +485,7 @@ pr help        # ou: pr --help, pr -h, pr (sem argumentos)
 | `pr delete <alvo\|all>` | `rm` | para, remove da lista e apaga logs |
 | `pr clean` | | remove da lista tudo que já está parado |
 | `pr register` | `domains` (só lista) | liga um domínio a um projeto |
+| `pr sub` | `subdominio` | cria um subdomínio de um domínio já publicado |
 | `pr unregister <dominio>` | `unlink` | desliga o domínio, apaga o certificado |
 | `pr proxy status\|start\|stop\|logs` | | controla o proxy reverso |
 | `pr cloudflare` | `cf` | publica por túnel da Cloudflare |
@@ -545,6 +592,7 @@ O proxy usa o arquivo assim que ele existir, sem precisar reiniciar.
 | `src/acme.js` | ~236 | cliente do protocolo ACME v2 (Let's Encrypt) |
 | `src/asn1.js` | 43 | codificador DER mínimo, usado para montar o CSR |
 | `src/register.js` | ~289 | o comando `pr register` e a listagem de domínios |
+| `src/sub.js` | ~215 | o comando `pr sub`, nos dois caminhos de publicação |
 | `src/domains.js` | ~109 | leitura/escrita de `domains.json`, validação de domínio |
 | `src/net.js` | ~87 | IP público do servidor, resolução DNS |
 | `src/prompt.js` | ~121 | seleção com setas, leitura de texto no terminal |

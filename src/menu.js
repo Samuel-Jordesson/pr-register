@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as domainsCli from './register.js';
 import { cmdCloudflare } from './cftunnel.js';
+import { cmdSub } from './sub.js';
 import { startAndReport, shortenPath } from './start.js';
 import { select, ask, isInteractive } from './prompt.js';
 import { c, box, width, info, fail } from './ui.js';
@@ -73,6 +74,11 @@ export async function cmdMenu() {
         value: 'run',
       },
       {
+        label: 'criar subdomínio',
+        hint: 'aponta app.seudominio.com para outro projeto',
+        value: 'sub',
+      },
+      {
         label: 'conectar via Cloudflare',
         hint: 'publica por túnel, sem precisar de IP público',
         value: 'cloudflare',
@@ -84,6 +90,7 @@ export async function cmdMenu() {
 
   if (choice === 'register') return domainsCli.cmdRegister();
   if (choice === 'run') return runProject();
+  if (choice === 'sub') return cmdSub();
   if (choice === 'cloudflare') return cmdCloudflare();
 
   console.log();

@@ -239,3 +239,19 @@ test('os vínculos ganham id curto e podem ser achados por id, endereço ou proj
   assert.equal(r.portaNova, 9999);
   assert.equal(r.reaproveitado, 0, 'o id liberado volta a ser usado');
 });
+
+test('validarRotulo aceita só o pedaço da frente do subdomínio', async () => {
+  const { validarRotulo } = await import('../src/sub.js');
+
+  assert.equal(validarRotulo('app').label, 'app');
+  assert.equal(validarRotulo('  APP  ').label, 'app');
+  assert.equal(validarRotulo('meu-app2').label, 'meu-app2');
+  assert.equal(validarRotulo('app.').label, 'app');
+
+  // o erro precisa ensinar o formato certo, não só recusar
+  assert.match(validarRotulo('app.efflar.com').erro, /sem pontos/);
+  assert.match(validarRotulo('').erro, /branco/);
+  assert.match(validarRotulo('-app').erro, /hífen no meio/);
+  assert.match(validarRotulo('app-').erro, /hífen no meio/);
+  assert.match(validarRotulo('a'.repeat(64)).erro, /63/);
+});

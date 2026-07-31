@@ -31,7 +31,7 @@ export async function cmdCloudflare(args = []) {
  * Pega as credenciais guardadas ou pergunta por elas.
  * @returns {Promise<import('./cloudflare.js').Credenciais|null>}
  */
-async function login({ forcar = false } = {}) {
+export async function login({ forcar = false } = {}) {
   const guardadas = cf.credentials();
 
   if (guardadas && !forcar) {
@@ -249,7 +249,7 @@ async function perguntarHostname(zoneName) {
 }
 
 /** Cria o túnel, aponta o DNS e sobe o cloudflared. */
-async function publicar({ creds, projeto, porta, zona, hostname }) {
+export async function publicar({ creds, projeto, porta, zona, hostname }) {
   const passo = (msg) => console.log(`  ${c.accent(symbols.arrow)} ${c.dim(msg)}`);
 
   try {

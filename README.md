@@ -154,6 +154,7 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 | `pr clean` | remove tudo que já parou |
 | `pr register` | liga um domínio a um projeto (interativo) e lista os já ligados |
 | `pr domains` | o mesmo que `pr register`, só a lista |
+| `pr sub` | cria um subdomínio apontando para outro projeto |
 | `pr unregister <dominio>` | desliga o domínio e apaga o certificado |
 | `pr proxy start\|stop\|status` | o proxy que atende as portas 80 e 443 |
 | `pr proxy logs [-f]` | o que o proxy e o Let's Encrypt andam fazendo |
@@ -234,6 +235,16 @@ Para testar sem tocar nas portas privilegiadas: `PR_HTTP_PORT=8080 PR_HTTPS_PORT
 - o projeto escutando em `127.0.0.1` ou `0.0.0.0` na porta que aparece no `pr list`.
 
 Use `PR_ACME_DIRECTORY` para apontar ao staging do Let's Encrypt enquanto testa — os limites de emissão do ambiente de produção são baixos.
+
+## Subdomínios
+
+Já tem um domínio publicado e quer que `app.seudominio.com` responda por **outro** projeto, noutra porta?
+
+```bash
+pr sub
+```
+
+Ele lista os domínios já publicados (com o projeto e a porta de cada um), pergunta o nome do subdomínio e qual projeto vai atender ali. Se o domínio veio do `pr register`, o roteamento vale na hora e ele mostra o registro `A` a acrescentar na zona DNS; se veio do `pr cloudflare`, o registro e a rota do túnel são criados sozinhos.
 
 ## Publicando por túnel da Cloudflare
 
