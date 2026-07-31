@@ -1,8 +1,19 @@
-# PR System
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo.png">
+    <img src="assets/logo-light.png" alt="PR System" width="238">
+  </picture>
+</p>
 
-Rode qualquer projeto em segundo plano com um comando, veja em que porta ele subiu e publique num domínio seu com HTTPS. Um `pm2` enxuto com um pedaço de `nginx` embutido — em Node puro, sem dependências.
+<p align="center">
+  Rode qualquer projeto em segundo plano com um comando, veja em que porta ele subiu<br>
+  e publique num domínio seu com HTTPS. Um <code>pm2</code> enxuto com um pedaço de <code>nginx</code><br>
+  embutido — em Node puro, sem dependências.
+</p>
 
-Documentação completa (uso, instalação, arquitetura interna e como mexer no código): [DOCUMENTACAO.md](DOCUMENTACAO.md).
+<p align="center">
+  <a href="DOCUMENTACAO.md">Documentação completa</a> · uso, instalação, arquitetura e como mexer no código
+</p>
 
 Digite `pr` sozinho e escolha pelo menu:
 
