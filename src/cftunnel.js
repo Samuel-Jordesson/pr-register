@@ -17,6 +17,11 @@ export async function cmdCloudflare(args = []) {
 
   if (acao === 'kill' || acao === 'rm' || acao === 'delete' || acao === 'unlink')
     return desvincular(args.slice(1));
+  if (acao === 'sub' || acao === 'subdominio') {
+    // import tardio: sub.js reaproveita o publicar() daqui
+    const { cmdSub } = await import('./sub.js');
+    return cmdSub(args.slice(1), { apenas: 'tunel' });
+  }
   if (acao === 'logout') return logout();
   if (acao === 'list' || acao === 'status') return listar();
   if (acao === 'sync') return sincronizar();

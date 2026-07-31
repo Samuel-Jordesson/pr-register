@@ -364,6 +364,7 @@ function help() {
     '',
     cmd('pr cloudflare', 'publica por túnel da Cloudflare (sem IP público)'),
     cmd('pr cloudflare list', 'os túneis criados, com id, projeto e porta'),
+    cmd('pr cloudflare sub', 'subdomínio num domínio de túnel, tudo automático'),
     cmd('pr cloudflare kill <id>', 'desvincula o domínio do projeto'),
     cmd('pr cloudflare sync', 'reescreve os túneis com as portas atuais'),
     cmd('pr cloudflare login|logout', 'troca ou remove a credencial da conta'),

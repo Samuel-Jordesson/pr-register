@@ -350,6 +350,7 @@ O "resto" é: baixar o `cloudflared` se faltar, criar o túnel na sua conta, gra
 | --- | --- |
 | `pr cloudflare` | o fluxo acima (apelido: `pr cf`) |
 | `pr cloudflare list` | id, endereço, projeto, porta e estado de cada conector |
+| `pr cloudflare sub` | cria um subdomínio num domínio de túnel — tudo automático |
 | `pr cloudflare kill <id>` | desvincula o domínio do projeto (apelidos: `rm`, `delete`, `unlink`) |
 | `pr cloudflare sync` | reescreve os túneis com as portas atuais e reinicia os conectores |
 | `pr cloudflare login` | troca a credencial |
@@ -373,6 +374,16 @@ Na listagem, a bolinha diz o estado **real**, lido do log do conector:
 | 🟢 verde | conexão registrada na borda da Cloudflare — está servindo |
 | 🟡 amarelo | o conector subiu mas ainda não registrou (credencial recusada e rede bloqueada são as causas comuns) |
 | 🔴 vermelho | o conector está parado, ou o projeto caiu |
+
+### Subdomínios no túnel
+
+```bash
+pr cloudflare sub
+```
+
+É o mesmo fluxo do [`pr sub`](#subdomínios), mas listando **só** os domínios publicados por túnel — sem misturar com os do proxy. Escolha o domínio, digite o rótulo e diga qual projeto atende ali.
+
+Nesse caminho **não sobra nada manual**: o `CNAME` do subdomínio é criado na sua zona da Cloudflare pela API, a rota entra no `config.yml`, e o conector do projeto escolhido sobe junto. Se o projeto ainda não tinha túnel, um é criado para ele (`pr-<projeto>`); se já tinha, a rota é acrescentada ao que existe.
 
 ### Desvinculando
 
@@ -446,7 +457,7 @@ pr sub
   ✔ blog.efflar.com → blog (porta 6002)
 ```
 
-A lista de partida junta os dois caminhos de publicação — cada linha mostra o projeto, a porta e se veio do `pr register` (proxy) ou do `pr cloudflare` (túnel). O que acontece depois depende de qual for:
+Para listar só os domínios de túnel, use `pr cloudflare sub` — o fluxo é o mesmo. A lista de partida do `pr sub` junta os dois caminhos de publicação — cada linha mostra o projeto, a porta e se veio do `pr register` (proxy) ou do `pr cloudflare` (túnel). O que acontece depois depende de qual for:
 
 - **domínio do proxy** — o vínculo entra em `domains.json` na hora, e o roteamento passa a valer imediatamente. Falta só o registro `A` do subdomínio na sua zona DNS, que o `pr` mostra na tela; quando ele propagar, o certificado sai sozinho.
 - **domínio de túnel** — não falta nada: o `CNAME` e a rota do túnel são criados na hora, pela API da Cloudflare, e o conector do projeto escolhido sobe automaticamente.

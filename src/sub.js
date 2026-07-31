@@ -33,8 +33,11 @@ export function validarRotulo(entrada) {
   return { label: limpo };
 }
 
-/** Tudo que já está publicado, dos dois caminhos, numa lista só. */
-function publicados() {
+/**
+ * Tudo que já está publicado, dos dois caminhos, numa lista só.
+ * @param {'proxy'|'tunel'} [apenas] restringe a um dos caminhos
+ */
+function publicados(apenas) {
   const doProxy = domains.all().map((b) => {
     const proc = store.read(b.process);
     const vivo = proc ? runner.inspect(proc) : null;
@@ -55,17 +58,29 @@ function publicados() {
     link: l,
   }));
 
-  return [...doProxy, ...doTunel].sort((a, b) => a.hostname.localeCompare(b.hostname));
+  const todos = apenas === 'proxy' ? doProxy : apenas === 'tunel' ? doTunel : [...doProxy, ...doTunel];
+  return todos.sort((a, b) => a.hostname.localeCompare(b.hostname));
 }
 
-export async function cmdSub(args = []) {
-  const lista = publicados();
+/**
+ * @param {string[]} args
+ * @param {{apenas?:'proxy'|'tunel'}} [opcoes] `apenas: 'tunel'` é o que o
+ *   `pr cloudflare sub` usa, para não misturar com os domínios do proxy
+ */
+export async function cmdSub(args = [], { apenas } = {}) {
+  const lista = publicados(apenas);
 
   console.log();
   if (!lista.length) {
-    fail('nenhum domínio publicado ainda');
+    fail(
+      apenas === 'tunel'
+        ? 'nenhum domínio publicado por túnel ainda'
+        : 'nenhum domínio publicado ainda'
+    );
     console.log(
-      `  ${c.faint('publique um primeiro com')} ${c.accent('pr register')} ${c.faint('ou')} ${c.accent('pr cloudflare')}`
+      apenas === 'tunel'
+        ? `  ${c.faint('publique um primeiro com')} ${c.accent('pr cloudflare')}`
+        : `  ${c.faint('publique um primeiro com')} ${c.accent('pr register')} ${c.faint('ou')} ${c.accent('pr cloudflare')}`
     );
     console.log();
     process.exitCode = 1;

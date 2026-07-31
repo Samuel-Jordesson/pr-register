@@ -161,6 +161,7 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 | `pr proxy logs [-f]` | o que o proxy e o Let's Encrypt andam fazendo |
 | `pr cloudflare` | publica por túnel da Cloudflare, sem IP público (apelido: `pr cf`) |
 | `pr cloudflare list` | túneis criados, com id, projeto e porta |
+| `pr cloudflare sub` | subdomínio num domínio de túnel, tudo automático |
 | `pr cloudflare kill <id>` | desvincula o domínio do projeto |
 | `pr cloudflare sync` | reajusta os túneis às portas atuais |
 | `pr cloudflare login\|logout` | credencial da conta Cloudflare |
@@ -245,7 +246,9 @@ Já tem um domínio publicado e quer que `app.seudominio.com` responda por **out
 pr sub
 ```
 
-Ele lista os domínios já publicados (com o projeto e a porta de cada um), pergunta o nome do subdomínio e qual projeto vai atender ali. Se o domínio veio do `pr register`, o roteamento vale na hora e ele mostra o registro `A` a acrescentar na zona DNS; se veio do `pr cloudflare`, o registro e a rota do túnel são criados sozinhos.
+Ele lista os domínios já publicados (com o projeto e a porta de cada um), pergunta o nome do subdomínio e qual projeto vai atender ali. Se o domínio veio do `pr register`, o roteamento vale na hora e ele mostra o registro `A` a acrescentar na zona DNS; se veio do `pr cloudflare`, o registro e a rota do túnel são criados sozinhos — nada manual.
+
+Para trabalhar só com os domínios de túnel, `pr cloudflare sub` faz o mesmo sem misturar com os do proxy.
 
 ## Publicando por túnel da Cloudflare
 
