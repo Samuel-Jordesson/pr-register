@@ -97,6 +97,10 @@ O lançador **fixa o caminho do Node usado na instalação**. Isso é proposital
 
 Digitando só `pr`, sem argumentos, abre uma tela de escolha:
 
+<p align="center">
+  <img src="assets/projeto.png" alt="Menu do PR System no terminal" width="760">
+</p>
+
 ```
 ╭─ PR System ──────────────────────────────────────────────────────────╮
 │ ██████╗ ██████╗ ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗ │

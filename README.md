@@ -6,33 +6,9 @@ Documentação completa (uso, instalação, arquitetura interna e como mexer no 
 
 Digite `pr` sozinho e escolha pelo menu:
 
-```
-$ pr
-
-╭─ PR System ──────────────────────────────────────────────────────────╮
-│ ██████╗ ██████╗ ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗ │
-│ ██╔══██╗██╔══██╗██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║ │
-│ ██████╔╝██████╔╝███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║ │
-│ ██╔═══╝ ██╔══██╗╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║ │
-│ ██║     ██║  ██║███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║ │
-│ ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝ │
-│                                                                       │
-│ Rode qualquer projeto em segundo plano e publique                     │
-│ cada um no seu próprio domínio, com HTTPS automático.                 │
-│                                                                       │
-│ versão 0.1.0  · zero dependências  · pr help para todos os comandos   │
-╰───────────────────────────────────────────────────────────────────────╯
-
-  o que você quer fazer?
-
-  → registrar domínio         publica um projeto num domínio seu, com https
-    rodar projeto             sobe um projeto em segundo plano
-    criar subdomínio          aponta app.seudominio.com para outro projeto
-    conectar via Cloudflare   publica por túnel, sem precisar de IP público
-    sair
-
-  ↑ ↓ para navegar · enter para escolher · esc para sair
-```
+<p align="center">
+  <img src="assets/projeto.png" alt="Menu do PR System no terminal" width="820">
+</p>
 
 Ou vá direto ao ponto pela linha de comando:
 
