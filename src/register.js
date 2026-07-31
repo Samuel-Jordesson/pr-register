@@ -230,6 +230,17 @@ export async function cmdProxy(args) {
       ok(`proxy no ar ${c.faint(`(pid ${result.pid}, portas ${result.ports.http} e ${result.ports.https})`)}`);
     } else {
       fail(`não subiu: ${result.error}`);
+      if (result.culpado) {
+        const { porta, nome, pid } = result.culpado;
+        console.log(
+          nome
+            ? `  ${c.faint(`a porta ${porta} já está ocupada por`)} ${c.text(nome)}${pid ? c.faint(` (pid ${pid})`) : ''}`
+            : `  ${c.faint(`algo já escuta na porta ${porta} — veja quem com:`)} ${c.text(`sudo ss -tlnp 'sport = :${porta}'`)}`
+        );
+        console.log(
+          `  ${c.faint('se for o nginx voltando no boot:')} ${c.text('sudo systemctl disable --now nginx')}`
+        );
+      }
       if (String(result.error).includes('EACCES')) {
         console.log();
         console.log(proxyctl.permissionHint().split('\n').map((l) => `  ${c.faint(l)}`).join('\n'));

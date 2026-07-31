@@ -1,7 +1,9 @@
 // Descoberta do IP público e checagem de DNS.
 
+import fs from 'node:fs';
 import os from 'node:os';
 import dns from 'node:dns/promises';
+import { execFileSync } from 'node:child_process';
 
 /** IPs locais não-internos, como palpite de fallback. */
 export function localIps() {
@@ -73,6 +75,51 @@ export async function pointsHere(domain, ip) {
     records,
     extras: ip ? records.filter((r) => r !== ip) : records,
   };
+}
+
+/**
+ * Quem está ocupando uma porta TCP local.
+ * @returns {{pid:number|null, nome:string}|null}
+ */
+export function whoHasPort(port) {
+  try {
+    const saida = execFileSync('ss', ['-tlnpH', `sport = :${port}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const linha = saida.split('\n').find((l) => l.trim());
+    if (!linha) return null;
+
+    const users = linha.match(/users:\(\("([^"]+)",pid=(\d+)/);
+    if (!users) return { nome: null, pid: null };
+
+    const pid = Number(users[2]);
+    return { nome: nomeDoProcesso(pid) || users[1], pid };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nome amigável de um processo. O `ss` mostra o nome da thread — no node
+ * isso sai como "MainThread" —, então a linha de comando serve melhor.
+ */
+function nomeDoProcesso(pid) {
+  try {
+    const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+    const primeiro = cmdline.split('\0')[0];
+    if (primeiro) {
+      // "nginx: master process /usr/sbin/nginx" → nginx
+      return primeiro.split(/[:\s]/)[0].split('/').pop();
+    }
+  } catch {
+    // processo de outro usuário, ou já morreu
+  }
+  try {
+    return fs.readFileSync(`/proc/${pid}/comm`, 'utf8').trim();
+  } catch {
+    return null;
+  }
 }
 
 /** Alguém já escuta nesta porta local? */

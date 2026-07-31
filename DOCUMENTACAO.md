@@ -11,6 +11,8 @@ Tudo sobre o projeto num lugar só: o que é, como instalar, como usar no dia a 
 - [Domínio próprio e HTTPS](#domínio-próprio-e-https)
 - [Cloudflare Tunnel](#cloudflare-tunnel)
 - [Subdomínios](#subdomínios)
+- [Sobreviver ao reboot](#sobreviver-ao-reboot)
+- [Abrindo portas](#abrindo-portas)
 - [Referência de comandos](#referência-de-comandos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Onde tudo fica guardado](#onde-tudo-fica-guardado-e-o-formato)
@@ -476,6 +478,67 @@ outro.efflar.com  → site  (não registrado, cai no pai)
 
 Então `pr sub` serve exatamente para o caso em que você quer que um subdomínio **específico** vá para outro lugar.
 
+## Sobreviver ao reboot
+
+Por padrão, nada volta sozinho depois que o servidor reinicia: os processos morrem com a máquina e o `pr` não tem serviço de boot. Para resolver isso de uma vez:
+
+```bash
+sudo pr startup
+```
+
+Isso instala uma unidade do systemd (`/etc/systemd/system/pr.service`) que, a cada boot, chama `pr resurrect` como o **seu** usuário — não como root. Tudo que estava no ar quando a máquina caiu volta: projetos, o proxy e os conectores da Cloudflare (que são processos comuns do `pr`).
+
+```bash
+sudo pr startup           # instala e habilita
+sudo pr startup remove    # desinstala
+sudo systemctl start pr   # testa agora, sem reiniciar
+pr resurrect              # restaura na mão, a qualquer momento
+```
+
+O `pr resurrect` funciona sozinho, sem systemd: ele olha o estado em `~/.pr`, vê quais processos estão registrados como `online` mas com pid morto — exatamente o retrato do que a máquina derrubou — e sobe cada um de novo, com o mesmo comando, pasta e nome. É idempotente: rodar de novo com tudo no ar não faz nada.
+
+O proxy volta se o `~/.pr/proxy.json` tiver ficado para trás, que é o sinal de que ele estava rodando quando a máquina caiu (num `pr proxy stop` normal esse arquivo é apagado).
+
+### Se o proxy não subir depois do boot
+
+```
+✖ não subiu: EADDRINUSE
+  a porta 80 já está ocupada por nginx (pid 812)
+  se for o nginx voltando no boot: sudo systemctl disable --now nginx
+```
+
+Esse é o caso mais comum: o nginx foi parado alguma vez com `systemctl stop`, mas continuou **habilitado** — então volta no boot e toma a porta 80 antes do `pr`. `disable` resolve de vez. O `pr` identifica o dono da porta lendo `/proc`, então a mensagem diz o nome do processo em vez de só `EADDRINUSE`.
+
+## Abrindo portas
+
+```bash
+pr port          # as portas dos projetos e quais estão liberadas
+pr port 3000     # abre a 3000 no firewall da máquina
+```
+
+```
+╭─ portas ────────────────────────────────╮
+│  PORTA  PROJETO  NO FIREWALL             │
+├──────────────────────────────────────────┤
+│ ● 3000  meuapp   aberta                  │
+│ ● 5173  site     fechada — pr port 5173  │
+├──────────────────────────────────────────┤
+│ firewall: ufw  ·  abrir: pr port <porta> │
+╰──────────────────────────────────────────╯
+```
+
+Reconhece **ufw**, **firewalld** e **iptables** puro, nessa ordem de preferência, e usa `sudo` quando precisa (a senha é pedida pelo próprio sudo). Com iptables puro ele avisa que a regra se perde no reboot e mostra como fixar.
+
+**Isso abre só o firewall da máquina.** Num VPS há uma segunda camada, no painel do provedor, que o `pr` não alcança — e é a que mais confunde:
+
+| Provedor | Onde |
+| --- | --- |
+| Oracle Cloud | Networking → VCN → Security Lists → Ingress Rules |
+| AWS | EC2 → Security Groups → Inbound rules |
+| Hostinger | VPS → Firewall |
+
+Conferir de fora: `curl http://SEU_IP:3000`.
+
 ## Referência de comandos
 
 A referência completa também está embutida no próprio programa:
@@ -496,6 +559,9 @@ pr help        # ou: pr --help, pr -h, pr (sem argumentos)
 | `pr stop <alvo\|all>` | `kill` | para, mantém na lista |
 | `pr delete <alvo\|all>` | `rm` | para, remove da lista e apaga logs |
 | `pr clean` | | remove da lista tudo que já está parado |
+| `pr port [porta]` | `porta` | lista as portas dos projetos, ou abre uma no firewall |
+| `pr startup` | | instala o serviço que devolve tudo ao ar depois do boot |
+| `pr resurrect` | | restaura agora tudo que estava no ar |
 | `pr register` | `domains` (só lista) | liga um domínio a um projeto |
 | `pr sub` | `subdominio` | cria um subdomínio de um domínio já publicado |
 | `pr unregister <dominio>` | `unlink` | desliga o domínio, apaga o certificado |
@@ -605,6 +671,8 @@ O proxy usa o arquivo assim que ele existir, sem precisar reiniciar.
 | `src/asn1.js` | 43 | codificador DER mínimo, usado para montar o CSR |
 | `src/register.js` | ~289 | o comando `pr register` e a listagem de domínios |
 | `src/sub.js` | ~215 | o comando `pr sub`, nos dois caminhos de publicação |
+| `src/startup.js` | ~200 | `pr startup` e `pr resurrect` |
+| `src/port.js` · `src/firewall.js` | ~230 | `pr port` e o trato com ufw/firewalld/iptables |
 | `src/domains.js` | ~109 | leitura/escrita de `domains.json`, validação de domínio |
 | `src/net.js` | ~87 | IP público do servidor, resolução DNS |
 | `src/prompt.js` | ~121 | seleção com setas, leitura de texto no terminal |
@@ -682,7 +750,7 @@ Veja a seção **Problemas comuns** do [README.md](README.md#problemas-comuns) p
 
 ## Limitações conhecidas
 
-- **Não sobrevive a reboot.** Nem os processos gerenciados nem o proxy voltam sozinhos depois de reiniciar o servidor — é preciso rodar `pr proxy start` e subir os projetos de novo manualmente. Não há hoje um `pr startup` que gere uma unit systemd (é o próximo passo natural, se for necessário).
+- **O reboot precisa do `pr startup`.** Sem ele, nada volta sozinho; com ele, o systemd chama o `pr resurrect` no boot. Veja [Sobreviver ao reboot](#sobreviver-ao-reboot).
 - **Só Linux.** A descoberta de porta depende de `/proc` e do comando `ss` (com `lsof` como alternativa).
 - **Uma porta por processo é assumida no proxy** — não há balanceamento entre múltiplas instâncias do mesmo projeto.
 - **DNS é responsabilidade do usuário** no caminho do `pr register`: o `pr` não mexe na zona pelo provedor (Hostinger/Registro.br/etc), apenas mostra o que colar e confere se já resolve. No caminho da Cloudflare o registro é criado automaticamente, porque ali existe API.

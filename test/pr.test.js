@@ -255,3 +255,44 @@ test('validarRotulo aceita só o pedaço da frente do subdomínio', async () => 
   assert.match(validarRotulo('app-').erro, /hífen no meio/);
   assert.match(validarRotulo('a'.repeat(64)).erro, /63/);
 });
+
+test('a unidade do systemd aponta para o pr certo e roda como o usuário', async () => {
+  const { unidade } = await import('../src/startup.js');
+
+  const unit = unidade({
+    usuario: 'ubuntu',
+    home: '/home/ubuntu',
+    prBin: '/usr/local/bin/pr',
+    prHome: '/home/ubuntu/.pr',
+  });
+
+  assert.match(unit, /^User=ubuntu$/m);
+  assert.match(unit, /^Environment=HOME=\/home\/ubuntu$/m);
+  assert.match(unit, /^Environment=PR_HOME=\/home\/ubuntu\/\.pr$/m);
+  assert.match(unit, /^ExecStart=\/usr\/local\/bin\/pr resurrect$/m);
+  assert.match(unit, /^WantedBy=multi-user\.target$/m, 'sem isto o enable não pega no boot');
+  // oneshot que solta processos precisa continuar "ativo" depois de sair
+  assert.match(unit, /^Type=oneshot$/m);
+  assert.match(unit, /^RemainAfterExit=yes$/m);
+  // a rede precisa estar de pé antes: o proxy descobre o ip e o dns
+  assert.match(unit, /^After=network-online\.target$/m);
+});
+
+test('whoHasPort identifica quem está numa porta ocupada', async (t) => {
+  const http = await import('node:http');
+  const { whoHasPort } = await import('../src/net.js');
+
+  const server = http.createServer(() => {});
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const porta = server.address().port;
+  t.after(() => new Promise((r) => server.close(r)));
+
+  const dono = whoHasPort(porta);
+  assert.ok(dono, 'a porta está ocupada por este próprio teste');
+  assert.equal(dono.pid, process.pid);
+  assert.match(dono.nome, /node/, 'o nome vem da linha de comando, não da thread');
+
+  // uma porta livre não tem dono
+  const livre = whoHasPort(1);
+  assert.equal(livre, null);
+});

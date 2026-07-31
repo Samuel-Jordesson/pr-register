@@ -53,6 +53,10 @@ export async function startAndReport({ command, cwd, name }) {
     console.log(
       `  ${c.faint(`logs: pr logs ${proc.name} -f   ·   parar: pr stop ${proc.name}`)}`
     );
+    if (port) {
+      // abrir a porta é o passo seguinte mais comum num servidor
+      console.log(`  ${c.faint(`abrir a porta de fora: pr port ${port}   ·   publicar num domínio: pr register`)}`);
+    }
     console.log();
     return true;
   }

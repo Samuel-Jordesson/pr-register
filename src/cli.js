@@ -7,6 +7,8 @@ import * as domainsCli from './register.js';
 import { cmdMenu, isMenuAvailable } from './menu.js';
 import { cmdCloudflare } from './cftunnel.js';
 import { cmdSub } from './sub.js';
+import { cmdPort } from './port.js';
+import { cmdStartup, cmdResurrect } from './startup.js';
 import { startAndReport, shortenPath } from './start.js';
 import { c, tableLines, box, RULE, symbols, statusDot, ok, info, fail, since, bytes, truncate } from './ui.js';
 
@@ -17,6 +19,7 @@ const KNOWN = new Set([
   'info', 'show', 'delete', 'rm', 'del', 'help', 'clean',
   'register', 'domains', 'unregister', 'unlink', 'proxy', 'menu',
   'cloudflare', 'cf', 'sub', 'subdominio', 'subdomain',
+  'port', 'porta', 'startup', 'resurrect',
 ]);
 
 export async function main(argv) {
@@ -70,6 +73,13 @@ export async function main(argv) {
     case 'subdominio':
     case 'subdomain':
       return cmdSub(rest);
+    case 'port':
+    case 'porta':
+      return cmdPort(rest);
+    case 'startup':
+      return cmdStartup(rest);
+    case 'resurrect':
+      return cmdResurrect();
     default:
       return help();
   }
@@ -149,7 +159,9 @@ function cmdList() {
   );
 
   const online = procs.filter((p) => p.status === 'online').length;
-  const summary = c.faint(`${online} no ar · ${procs.length - online} fora do ar`);
+  const summary = c.faint(
+    `${online} no ar · ${procs.length - online} fora do ar  ·  abrir porta: pr port <porta>`
+  );
 
   console.log(box([header, RULE, ...body, RULE, summary], { title: 'processos' }));
   console.log();
@@ -352,6 +364,11 @@ function help() {
     cmd('pr kill <alvo|all>', 'o mesmo que stop'),
     cmd('pr delete <alvo|all>', 'para, tira da lista e apaga os logs'),
     cmd('pr clean', 'apaga da lista tudo que já está parado'),
+    '',
+    cmd('pr port', 'as portas dos projetos e quais estão abertas'),
+    cmd('pr port 3000', 'abre a porta no firewall da máquina'),
+    cmd('pr startup', 'faz tudo voltar sozinho depois de reiniciar'),
+    cmd('pr resurrect', 'sobe agora tudo que estava no ar antes'),
     section('DOMÍNIOS'),
     cmd('pr register', 'escolhe um projeto, pede o domínio e mostra o DNS'),
     cmd('pr domains', 'só a lista dos domínios e a situação de cada um'),

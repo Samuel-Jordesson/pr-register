@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { HOME } from './store.js';
 import { statePath } from './proxy.js';
 import { isAlive } from './proc.js';
+import { whoHasPort } from './net.js';
 
 const DAEMON = path.join(path.dirname(fileURLToPath(import.meta.url)), 'proxyd.js');
 
@@ -47,7 +48,7 @@ export async function start({ timeoutMs = 8000 } = {}) {
   while (Date.now() < deadline) {
     const s = state();
     if (s?.pid && isAlive(s.pid)) return { running: true, ...s };
-    if (s?.error) return { running: false, error: s.error };
+    if (s?.error) return { running: false, error: s.error, culpado: culpadoDaPorta(s.error) };
     if (!isAlive(child.pid) && !s) {
       return { running: false, error: 'o daemon saiu sem explicar (veja pr proxy logs)' };
     }
@@ -71,6 +72,14 @@ export async function stop() {
   if (isAlive(s.pid)) process.kill(s.pid, 'SIGKILL');
   fs.rmSync(statePath(), { force: true });
   return true;
+}
+
+/** Quem já ocupa a porta que o proxy queria — o caso clássico é o nginx. */
+function culpadoDaPorta(erro) {
+  if (!String(erro).includes('EADDRINUSE')) return null;
+  const porta = Number(process.env.PR_HTTP_PORT || 80);
+  const dono = whoHasPort(porta);
+  return { porta, ...(dono || { nome: null, pid: null }) };
 }
 
 /** Mensagem de ajuda para o caso clássico de porta 80 sem permissão. */

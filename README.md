@@ -153,6 +153,9 @@ Para desenvolver no próprio clone, `npm link` funciona igual — com a mesma re
 | `pr kill <alvo\|all>` | apelido de `stop` |
 | `pr delete <alvo\|all>` | para e remove, junto com os logs |
 | `pr clean` | remove tudo que já parou |
+| `pr port [porta]` | lista as portas dos projetos, ou abre uma no firewall |
+| `pr startup` | faz tudo voltar sozinho depois de reiniciar o servidor |
+| `pr resurrect` | restaura agora tudo que estava no ar |
 | `pr register` | liga um domínio a um projeto (interativo) e lista os já ligados |
 | `pr domains` | o mesmo que `pr register`, só a lista |
 | `pr sub` | cria um subdomínio apontando para outro projeto |
@@ -237,6 +240,31 @@ Para testar sem tocar nas portas privilegiadas: `PR_HTTP_PORT=8080 PR_HTTPS_PORT
 - o projeto escutando em `127.0.0.1` ou `0.0.0.0` na porta que aparece no `pr list`.
 
 Use `PR_ACME_DIRECTORY` para apontar ao staging do Let's Encrypt enquanto testa — os limites de emissão do ambiente de produção são baixos.
+
+## Depois de reiniciar o servidor
+
+```bash
+sudo pr startup
+```
+
+Instala um serviço do systemd que devolve tudo ao ar no boot — projetos, proxy e conectores da Cloudflare. Para restaurar na hora, sem reiniciar: `pr resurrect`.
+
+Se o proxy não subir depois do boot com `EADDRINUSE`, o `pr` agora diz quem está na porta:
+
+```
+✖ não subiu: EADDRINUSE
+  a porta 80 já está ocupada por nginx (pid 812)
+  se for o nginx voltando no boot: sudo systemctl disable --now nginx
+```
+
+## Abrindo portas
+
+```bash
+pr port          # portas dos projetos e quais estão liberadas
+pr port 3000     # abre a 3000 no firewall (ufw, firewalld ou iptables)
+```
+
+Lembre que num VPS existe uma segunda camada de firewall, no painel do provedor (Security List na Oracle, Security Group na AWS), que precisa ser liberada também — o `pr port` mostra onde.
 
 ## Subdomínios
 
